@@ -1,0 +1,135 @@
+/* ==========================================================================
+   Login Page Styles
+   ========================================================================== */
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--bg-light, #f9f9f9);
+  padding: 20px;
+}
+
+.login-container {
+  background-color: var(--bg-color, #ffffff);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15));
+  width: 100%;
+  max-width: 450px;
+  padding: 40px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.login-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--primary-color, #27ae60);
+  margin-bottom: 10px;
+}
+
+.login-logo .logo-icon {
+  font-size: 2rem;
+}
+
+.login-header p {
+  color: var(--text-light, #777777);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.register-link {
+  color: var(--primary-color, #27ae60);
+  font-weight: bold;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.95rem;
+}
+
+/* Forgot Password */
+.forgot-password {
+  text-align: right;
+  margin-top: -10px;
+  margin-bottom: 5px;
+}
+
+.forgot-password a {
+  color: var(--primary-color, #27ae60);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.forgot-password a:hover {
+  text-decoration: underline;
+}
+
+/* Social Login */
+.social-login-section {
+  margin-top: 30px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  padding-top: 20px;
+  text-align: center;
+}
+
+.social-login-text {
+  font-size: 0.85rem;
+  color: var(--text-light, #777777);
+  margin-bottom: 15px;
+}
+
+.social-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.3s;
+  color: white;
+}
+
+.social-btn:hover {
+  opacity: 0.9;
+}
+
+.social-icon {
+  font-size: 1.2rem;
+}
+
+.facebook-btn {
+  background-color: #1877f2;
+}
+
+.google-btn {
+  background-color: #db4437;
+}
