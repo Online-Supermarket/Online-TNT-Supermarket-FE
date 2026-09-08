@@ -1,2 +1,13 @@
-import {Navigate,useLocation} from 'react-router-dom';import {useAuth} from '../context/AuthContext';
-export default function ProtectedRoute({children}){const {isAuthenticated}=useAuth();const location=useLocation();return isAuthenticated?children:<Navigate to="/login" replace state={{from:location}}/>}
+import {Navigate,useLocation} from 'react-router-dom';
+import {useAuth} from '../context/AuthContext';
+import LoadingSpinner from './LoadingSpinner';
+
+export default function ProtectedRoute({children}){
+  const {isAuthenticated, loading} = useAuth();
+  const location = useLocation();
+
+  if (loading) return <LoadingSpinner />;
+  return isAuthenticated
+    ? children
+    : <Navigate to="/login" replace state={{from: location}} />;
+}

@@ -29,6 +29,7 @@ api.interceptors.response.use(
     // Handle 401 Unauthorized - redirect to login
     if (error.response?.status === 401) {
       localStorage.removeItem('tnt_token');
+      localStorage.removeItem('tnt_refresh_token');
       localStorage.removeItem('tnt_user');
       window.location.href = '/login';
     }

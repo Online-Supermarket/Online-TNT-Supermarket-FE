@@ -9,8 +9,10 @@ const normalizeRole = (role) => {
   const upper = value.toUpperCase();
 
   if (upper === 'BUYER' || upper === 'CUSTOMER') return 'CUSTOMER';
-  if (upper === 'ADMIN' || upper === 'MANAGER') return 'ADMIN';
-  if (upper === 'STAFF' || upper === 'SELLER') return 'STAFF';
+  if (upper === 'ADMIN')    return 'ADMIN';
+  if (upper === 'MANAGER')  return 'MANAGER';
+  if (upper === 'SELLER')   return 'SELLER';
+  if (upper === 'STAFF')    return 'STAFF';
   if (upper === 'RIDER' || upper === 'DELIVERY') return 'DELIVERY';
 
   return upper || 'CUSTOMER';
@@ -60,7 +62,7 @@ const mergeUserProfile = async (baseUser) => {
     });
 
     return merged;
-  } catch (error) {
+  } catch {
     return normalizeUser(baseUser);
   }
 };
@@ -86,7 +88,7 @@ export function AuthProvider({children}){
       setUser(nextUser);
       setToken(currentToken);
       return nextUser;
-    } catch (error) {
+    } catch {
       localStorage.removeItem('tnt_token');
       localStorage.removeItem('tnt_refresh_token');
       localStorage.removeItem('tnt_user');
@@ -103,7 +105,6 @@ export function AuthProvider({children}){
       refreshUser();
       return;
     }
-
     setLoading(false);
   }, [token]);
 
@@ -127,15 +128,12 @@ export function AuthProvider({children}){
   const register = async (data) => {
     const payload = {
       fullName: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-      email: data.email,
+      email: (data.email || '').trim(),
       password: data.password,
       confirmPassword: data.confirm || data.confirmPassword || data.password,
-      phoneNumber: data.phone || data.phoneNumber || '',
+      phoneNumber: (data.phone || data.phoneNumber || '').trim() || null,
     };
 
-    console.log('AuthContext register payload:', payload);
-    console.log('AuthContext register input data:', data);
-    
     await authService.register(payload);
     const createdUser = await login(payload.email, payload.password);
     return createdUser;
@@ -148,8 +146,8 @@ export function AuthProvider({children}){
       if (refreshToken) {
         await authService.logout(refreshToken);
       }
-    } catch (error) {
-      // Ignore logout errors from backend and clear client state.
+    } catch {
+      // Ignore logout errors from backend — client state is always cleared below.
     } finally {
       localStorage.removeItem('tnt_token');
       localStorage.removeItem('tnt_refresh_token');
