@@ -5,17 +5,17 @@ import {authService} from '../services/authService';
 const AuthContext=createContext(null);
 
 const normalizeRole = (role) => {
-  const value = String(role || '').trim();
-  const upper = value.toUpperCase();
+  const upper = String(role || '').trim().toUpperCase();
+  const roleMap = {
+    BUYER: 'CUSTOMER',
+    CUSTOMER: 'CUSTOMER',
+    ADMIN: 'ADMIN',
+    STAFF: 'STAFF',
+    RIDER: 'DELIVERY',
+    DELIVERY: 'DELIVERY',
+  };
 
-  if (upper === 'BUYER' || upper === 'CUSTOMER') return 'CUSTOMER';
-  if (upper === 'ADMIN')    return 'ADMIN';
-  if (upper === 'MANAGER')  return 'MANAGER';
-  if (upper === 'SELLER')   return 'SELLER';
-  if (upper === 'STAFF')    return 'STAFF';
-  if (upper === 'RIDER' || upper === 'DELIVERY') return 'DELIVERY';
-
-  return upper || 'CUSTOMER';
+  return roleMap[upper] || 'CUSTOMER';
 };
 
 const normalizeUser = (user = {}) => {

@@ -1,2 +1,26 @@
-import {Banknote,CheckCircle2,ClipboardClock,Package,ShoppingCart,Truck,Users,UserCog} from 'lucide-react';import StatCard from '../../components/StatCard';import DataTable from '../../components/DataTable';import {PageHeader,Status} from '../../components/Ui';import {orders,products} from '../../data/dummyData';
-export default function AdminDashboard(){const stats=[[Users,'Total customers','1,284','+12.5% this month'],[UserCog,'Total staff','18','2 currently online'],[Truck,'Delivery team','12','8 currently active'],[Package,'Total products','846','24 categories'],[ShoppingCart,'Total orders','3,892','+8.2% this month'],[ClipboardClock,'Pending orders','24','Needs attention'],[CheckCircle2,'Completed','3,621','93.1% success rate'],[Banknote,'Total sales','$48,290','+18.4% this month']];return <><PageHeader eyebrow="Monday, September 7" title="Good morning, Olivia." description="Here's what is happening across TNT today."/><div className="stats-grid">{stats.map(([I,l,v,t],i)=><StatCard key={l} icon={I} label={l} value={v} trend={t} tone={['green','purple','orange','blue'][i%4]}/>)}</div><div className="dashboard-grid"><section className="panel panel-wide"><div className="panel-head"><div><h2>Sales overview</h2><p>Revenue across the last 7 days</p></div><select><option>This week</option><option>This month</option></select></div><div className="chart"><div className="y-axis"><span>$8k</span><span>$6k</span><span>$4k</span><span>$2k</span><span>$0</span></div><div className="bars">{[62,78,52,88,72,94,68].map((h,i)=><div key={i}><span style={{height:`${h}%`}} title={`$${h*80}`}></span><small>{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}</small></div>)}</div></div></section><section className="panel"><div className="panel-head"><div><h2>Order status</h2><p>All orders this month</p></div></div><div className="donut-wrap"><div className="donut"><span><b>3,892</b><small>Total orders</small></span></div><div className="donut-legend"><span><i className="green-dot"/>Delivered <b>72%</b></span><span><i className="orange-dot"/>Processing <b>18%</b></span><span><i className="purple-dot"/>Pending <b>10%</b></span></div></div></section></div><section className="panel"><div className="panel-head"><div><h2>Recent orders</h2><p>Latest activity from your customers</p></div><button className="btn btn-outline btn-small">View all orders</button></div><DataTable rows={orders} columns={[{key:'id',label:'ORDER ID',render:r=><b>{r.id}</b>},{key:'customer',label:'CUSTOMER'},{key:'date',label:'DATE'},{key:'total',label:'TOTAL',render:r=>`$${r.total.toFixed(2)}`},{key:'payment',label:'PAYMENT',status:true},{key:'status',label:'STATUS',status:true}]}/></section><section className="panel low-stock"><div className="panel-head"><div><h2>Low stock alerts</h2><p>Products that need restocking soon</p></div></div>{products.filter(p=>p.stock<15).map(p=><div key={p.id}><img src={p.image}/><span><b>{p.name}</b><small>{p.category}</small></span><strong>{p.stock} left</strong><Status>{p.stock?'Low Stock':'Out of Stock'}</Status></div>)}</section></>}
+import {ClipboardClock, Package, ShoppingCart, TriangleAlert} from 'lucide-react';
+import DataTable from '../../components/DataTable';
+import StatCard from '../../components/StatCard';
+import {PageHeader, Status} from '../../components/Ui';
+import useApiCollection from '../../hooks/useApiCollection';
+
+export default function AdminDashboard() {
+  const {data: orders} = useApiCollection('/api/orders');
+  const {data: products} = useApiCollection('/api/products');
+  const pendingOrders = orders.filter((order) => order.status === 'Pending');
+  const lowStockProducts = products.filter((product) => Number(product.stock) < 15);
+  const totalSales = orders.reduce((total, order) => total + Number(order.total || 0), 0);
+
+  return <>
+    <PageHeader title="Dashboard" description="Live supermarket activity." />
+    <div className="stats-grid">
+      <StatCard icon={Package} label="Products" value={products.length} trend="Live catalog" />
+      <StatCard icon={ShoppingCart} label="Orders" value={orders.length} trend="Live orders" tone="blue" />
+      <StatCard icon={ClipboardClock} label="Pending orders" value={pendingOrders.length} trend="Needs attention" tone="orange" />
+      <StatCard icon={TriangleAlert} label="Low stock" value={lowStockProducts.length} trend="Needs restocking" tone="purple" />
+    </div>
+    <section className="panel"><div className="panel-head"><div><h2>Total sales</h2><p>Calculated from live orders</p></div><strong>${totalSales.toFixed(2)}</strong></div></section>
+    <section className="panel"><div className="panel-head"><div><h2>Recent orders</h2><p>Latest live order activity</p></div></div><DataTable rows={orders.slice(0, 10)} columns={[{key:'id',label:'ORDER ID',render:r=><b>{r.id}</b>},{key:'customer',label:'CUSTOMER'},{key:'date',label:'DATE'},{key:'total',label:'TOTAL',render:r=>`$${Number(r.total || 0).toFixed(2)}`},{key:'payment',label:'PAYMENT',status:true},{key:'status',label:'STATUS',status:true}]} /></section>
+    <section className="panel low-stock"><div className="panel-head"><div><h2>Low stock alerts</h2><p>Live product inventory</p></div></div>{lowStockProducts.length ? lowStockProducts.map((product) => <div key={product.id}><img src={product.image} alt=""/><span><b>{product.name}</b><small>{product.category}</small></span><strong>{product.stock} left</strong><Status>{product.stock ? 'Low Stock' : 'Out of Stock'}</Status></div>) : <p>No low-stock products.</p>}</section>
+  </>;
+}

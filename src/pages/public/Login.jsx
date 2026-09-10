@@ -5,11 +5,9 @@ import Logo from '../../components/Logo';
 import {useAuth} from '../../context/AuthContext';
 
 const ROLE_HOME = {
-  ADMIN:    '/admin/dashboard',
-  MANAGER:  '/admin/dashboard',
-  STAFF:    '/staff/dashboard',
-  SELLER:   '/seller/dashboard',
-  DELIVERY: '/delivery/dashboard',
+  ADMIN:    '/admin',
+  STAFF:    '/staff',
+  DELIVERY: '/delivery',
 };
 
 export default function Login(){

@@ -4,7 +4,6 @@ import RoleRoute from '../components/RoleRoute';
 import MainLayout from '../layouts/MainLayout';
 import AdminLayout from '../layouts/AdminLayout';
 import StaffLayout from '../layouts/StaffLayout';
-import SellerLayout from '../layouts/SellerLayout';
 import DeliveryLayout from '../layouts/DeliveryLayout';
 
 import Home from '../pages/public/Home';
@@ -35,9 +34,6 @@ import StaffProducts from '../pages/staff/StaffProducts';
 import Inventory from '../pages/staff/Inventory';
 import StaffOrders from '../pages/staff/StaffOrders';
 
-import SellerDashboard from '../pages/seller/SellerDashboard';
-import SellerProfile from '../pages/seller/SellerProfile';
-
 import DeliveryDashboard from '../pages/delivery/DeliveryDashboard';
 import AssignedDeliveries from '../pages/delivery/AssignedDeliveries';
 import DeliveryHistory from '../pages/delivery/DeliveryHistory';
@@ -67,13 +63,14 @@ export default function AppRoutes() {
       <Route path="login"    element={<Login/>}/>
       <Route path="register" element={<Register/>}/>
 
-      {/* ── Admin portal (Admin + Manager) ───────────────────────── */}
-      <Route path="admin" element={<ProtectedRoute><RoleRoute roles={['ADMIN','MANAGER']}><AdminLayout/></RoleRoute></ProtectedRoute>}>
+      {/* ── Admin portal ─────────────────────────────────────────── */}
+      <Route path="admin" element={<Guard role="ADMIN"><AdminLayout/></Guard>}>
         <Route index element={<Navigate to="dashboard"/>}/>
         <Route path="dashboard"  element={<AdminDashboard/>}/>
         <Route path="users"      element={<ManageUsers/>}/>
         <Route path="products"   element={<ManageProducts/>}/>
         <Route path="categories" element={<ManageCategories/>}/>
+        <Route path="inventory"  element={<Inventory/>}/>
         <Route path="orders"     element={<ManageOrders/>}/>
         <Route path="offers"     element={<ManageOffers/>}/>
         <Route path="staff"      element={<ManageStaff/>}/>
@@ -92,18 +89,12 @@ export default function AppRoutes() {
         <Route path="profile"   element={<Profile/>}/>
       </Route>
 
-      {/* ── Seller portal ────────────────────────────────────────── */}
-      <Route path="seller" element={<Guard role="SELLER"><SellerLayout/></Guard>}>
-        <Route index element={<Navigate to="dashboard"/>}/>
-        <Route path="dashboard" element={<SellerDashboard/>}/>
-        <Route path="profile"   element={<SellerProfile/>}/>
-      </Route>
-
       {/* ── Delivery portal ──────────────────────────────────────── */}
       <Route path="delivery" element={<Guard role="DELIVERY"><DeliveryLayout/></Guard>}>
         <Route index element={<Navigate to="dashboard"/>}/>
         <Route path="dashboard" element={<DeliveryDashboard/>}/>
-        <Route path="assigned"  element={<AssignedDeliveries/>}/>
+        <Route path="orders"    element={<AssignedDeliveries/>}/>
+        <Route path="assigned"  element={<Navigate to="/delivery/orders" replace/>}/>
         <Route path="history"   element={<DeliveryHistory/>}/>
         <Route path="profile"   element={<DeliveryProfile/>}/>
       </Route>
