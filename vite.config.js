@@ -7,8 +7,16 @@ export default defineConfig({
     port: 5173,
     strictPort: false,
     proxy: {
-      '/api': {
+      '/api/auth': {
         target: 'http://localhost:5010',
+        changeOrigin: true,
+      },
+      '/api/products': {
+        target: 'http://localhost:5084',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://localhost:5150',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
       },
@@ -17,5 +25,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.js',
   },
 })

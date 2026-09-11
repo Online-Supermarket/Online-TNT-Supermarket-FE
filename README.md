@@ -10,7 +10,7 @@ npm install
 npm run dev
 ```
 
-The frontend uses realistic local demo data and is ready for an ASP.NET Core API at the URL configured by `VITE_API_BASE_URL`.
+The frontend uses realistic local demo data and is ready for ASP.NET Core APIs configured by `VITE_IDENTITY_API_URL` for authentication and `VITE_API_BASE_URL` / `VITE_API_URL` for the API Gateway.
 
 ## Demo sign-ins
 

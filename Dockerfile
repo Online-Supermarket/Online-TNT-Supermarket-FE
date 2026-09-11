@@ -13,6 +13,8 @@ RUN npm ci
 COPY . .
 
 # Build for production
+ARG VITE_API_URL=http://localhost:5000
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production stage
@@ -31,7 +33,7 @@ EXPOSE 5173
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV VITE_API_BASE_URL=http://localhost:5000
+ENV VITE_API_URL=http://localhost:5000
 
 # Start the application
 CMD ["serve", "-s", "dist", "-l", "5173"]

@@ -1,9 +1,9 @@
-import api from './api';
+import identityApi from './identityApi';
 
 export const authService = {
-  login: (data) => api.post('/api/auth/login', data),
-  register: (data) => api.post('/api/auth/register', data),
-  me: () => api.get('/api/auth/me'),
-  logout: (refreshToken) => api.post('/api/auth/logout', { refreshToken }),
-  refreshToken: (refreshToken) => api.post('/api/auth/refresh', { refreshToken }),
+  login: (data) => identityApi.post('/api/auth/login', data),
+  register: (data) => identityApi.post('/api/auth/register', data),
+  me: () => identityApi.get('/api/auth/me'),
+  logout: (refreshToken) => identityApi.post('/api/auth/logout', { refreshToken }),
+  refreshToken: (refreshToken) => identityApi.post('/api/auth/refresh', { refreshToken }),
 };
