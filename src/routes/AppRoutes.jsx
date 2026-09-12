@@ -28,6 +28,10 @@ import ManageStaff from '../pages/admin/ManageStaff';
 import ManageDelivery from '../pages/admin/ManageDelivery';
 import Reports from '../pages/admin/Reports';
 import Profile from '../pages/admin/Profile';
+import StoreListPage from '../features/stores/pages/StoreListPage';
+import StoreCreatePage from '../features/stores/pages/StoreCreatePage';
+import StoreEditPage from '../features/stores/pages/StoreEditPage';
+import StoreDetailsPage from '../features/stores/pages/StoreDetailsPage';
 
 import StaffDashboard from '../pages/staff/StaffDashboard';
 import StaffProducts from '../pages/staff/StaffProducts';
@@ -75,6 +79,10 @@ export default function AppRoutes() {
         <Route path="offers"     element={<ManageOffers/>}/>
         <Route path="staff"      element={<ManageStaff/>}/>
         <Route path="delivery"   element={<ManageDelivery/>}/>
+        <Route path="stores"     element={<StoreListPage/>}/>
+        <Route path="stores/new" element={<StoreCreatePage/>}/>
+        <Route path="stores/:id" element={<StoreDetailsPage/>}/>
+        <Route path="stores/:id/edit" element={<StoreEditPage/>}/>
         <Route path="reports"    element={<Reports/>}/>
         <Route path="profile"    element={<Profile/>}/>
       </Route>
