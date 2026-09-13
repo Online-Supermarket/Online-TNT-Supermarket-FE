@@ -15,6 +15,10 @@ export default defineConfig({
         target: 'http://localhost:5084',
         changeOrigin: true,
       },
+      '/api/categories': {
+        target: 'http://localhost:5084',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:5150',
         changeOrigin: true,
