@@ -59,4 +59,15 @@
 .store-detail-grid div{border:1px solid var(--line);border-radius:8px;padding:16px;background:#fbfcfb}
 .store-detail-grid small{display:block;color:var(--muted);font-size:.68rem;margin-bottom:7px}
 .store-detail-grid strong{display:block;color:var(--ink);font-size:.9rem;line-height:1.5}
-@media(max-width:560px){.store-form-actions,.store-details-head{align-items:stretch;flex-direction:column}.store-detail-grid{grid-template-columns:1fr}.store-pagination{justify-content:center;flex-wrap:wrap}}
+
+/* Category Management */
+.category-management{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:20px;align-items:start}
+.category-form textarea{resize:vertical;min-height:110px}
+.category-toggle{display:flex;align-items:center;gap:9px;margin-bottom:18px}
+.category-toggle input{width:auto;margin:0;accent-color:var(--green)}
+.category-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px}
+.category-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.category-actions .btn svg{width:15px}
+.btn.danger{color:#a84436}
+@media(max-width:980px){.category-management{grid-template-columns:1fr}.category-form{order:2}.category-list-panel{order:1}}
+@media(max-width:560px){.store-form-actions,.store-details-head{align-items:stretch;flex-direction:column}.store-detail-grid{grid-template-columns:1fr}.store-pagination{justify-content:center;flex-wrap:wrap}.category-toolbar{align-items:stretch;flex-direction:column}.category-actions{align-items:stretch;flex-direction:column}.category-actions .btn{width:100%}}

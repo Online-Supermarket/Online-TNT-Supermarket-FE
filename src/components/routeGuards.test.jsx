@@ -51,4 +51,40 @@ describe('auth route guards', () => {
     expect(screen.getByText('Customer home')).toBeInTheDocument();
     expect(screen.queryByText('Admin dashboard')).not.toBeInTheDocument();
   });
+
+  it('allows staff into staff category management routes', () => {
+    vi.mocked(useAuth).mockReturnValue({ role: 'STAFF', loading: false });
+
+    render(
+      <MemoryRouter initialEntries={['/staff/categories']}>
+        <Routes>
+          <Route
+            path="/staff/categories"
+            element={<RoleRoute roles={['STAFF']}><div>Category management</div></RoleRoute>}
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Category management')).toBeInTheDocument();
+  });
+
+  it('redirects customers away from category management routes', () => {
+    vi.mocked(useAuth).mockReturnValue({ role: 'CUSTOMER', loading: false });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/categories']}>
+        <Routes>
+          <Route
+            path="/admin/categories"
+            element={<RoleRoute roles={['ADMIN']}><div>Category management</div></RoleRoute>}
+          />
+          <Route path="/" element={<div>Customer home</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Customer home')).toBeInTheDocument();
+    expect(screen.queryByText('Category management')).not.toBeInTheDocument();
+  });
 });

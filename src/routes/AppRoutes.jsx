@@ -92,6 +92,7 @@ export default function AppRoutes() {
         <Route index element={<Navigate to="dashboard"/>}/>
         <Route path="dashboard" element={<StaffDashboard/>}/>
         <Route path="products"  element={<StaffProducts/>}/>
+        <Route path="categories" element={<ManageCategories/>}/>
         <Route path="inventory" element={<Inventory/>}/>
         <Route path="orders"    element={<StaffOrders/>}/>
         <Route path="profile"   element={<Profile/>}/>
