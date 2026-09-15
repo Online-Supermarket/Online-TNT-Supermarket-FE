@@ -38,7 +38,7 @@ jobs:
       - name: Build Vite production bundle
         run: npm run build
         env:
-          VITE_API_URL: http://localhost:5000
+          VITE_API_URL: http://localhost:5150
 
       - name: Upload frontend build artifact
         uses: actions/upload-artifact@v4
