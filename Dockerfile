@@ -1,5 +1,5 @@
 # Multi-stage build for frontend
-FROM node:18-alpine as build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 

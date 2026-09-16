@@ -52,11 +52,13 @@ describe('ManageProducts category integration', () => {
     fireEvent.change(screen.getByPlaceholderText(/stock/i), {target: {value: '20'}});
     fireEvent.click(screen.getByRole('button', {name: /save product/i}));
 
-    await waitFor(() => expect(productService.create).toHaveBeenCalledWith({
-      name: 'Milk',
-      categoryId: 'cat-2',
-      price: 3.25,
-      stockQuantity: 20,
-    }));
+    await waitFor(() => {
+      expect(productService.create).toHaveBeenCalled();
+      const formDataArg = productService.create.mock.calls[0][0];
+      expect(formDataArg.get('Name')).toBe('Milk');
+      expect(formDataArg.get('CategoryId')).toBe('cat-2');
+      expect(formDataArg.get('Price')).toBe('3.25');
+      expect(formDataArg.get('StockQuantity')).toBe('20');
+    });
   });
 });
