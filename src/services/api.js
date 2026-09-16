@@ -26,13 +26,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle 401 Unauthorized - redirect to login
+    // Handle 401 Unauthorized - redirect to login only if we don't have a valid user
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        localStorage.removeItem('tnt_token');
-        localStorage.removeItem('tnt_refresh_token');
-        localStorage.removeItem('tnt_user');
-        window.location.href = '/login';
+        const token = localStorage.getItem('tnt_token');
+        // Only clear session + redirect if there's no token at all
+        // (i.e., the user is truly unauthenticated, not just hitting an endpoint with role mismatch)
+        if (!token) {
+          localStorage.removeItem('tnt_token');
+          localStorage.removeItem('tnt_refresh_token');
+          localStorage.removeItem('tnt_user');
+          window.location.href = '/login';
+        }
       }
     }
     
@@ -44,5 +49,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default api;

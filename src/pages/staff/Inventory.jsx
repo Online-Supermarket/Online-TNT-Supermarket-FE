@@ -1,4 +1,16 @@
-import { Boxes, Edit2, Plus, RefreshCw, Save, TriangleAlert, X } from 'lucide-react';
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Boxes,
+  Edit2,
+  Filter,
+  Plus,
+  RefreshCw,
+  Save,
+  SlidersHorizontal,
+  TriangleAlert,
+  X,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import DataTable from '../../components/DataTable';
 import { Empty, PageHeader, SearchBox, Status } from '../../components/Ui';
@@ -10,39 +22,48 @@ import { productService } from '../../services/productService';
 const PAGE_SIZE = 20;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-function stockStatus(qty) {
+function stockStatus(item) {
+  const qty = typeof item === 'number' ? item : item.stockQuantity;
+  const isLow = typeof item === 'object' ? item.isLowStock : qty <= 10;
   if (qty === 0) return 'Out of Stock';
-  if (qty <= 10) return 'Low Stock';
+  if (isLow) return 'Low Stock';
   return 'In Stock';
 }
 
-function StockBadge({ quantity }) {
-  return <Status>{stockStatus(quantity)}</Status>;
+function StockBadge({ item }) {
+  return <Status>{stockStatus(item)}</Status>;
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function Inventory() {
   const { showToast } = useToast();
-  const searchRef = useRef('');       // track latest search without stale closures
+  const searchRef = useRef('');
   const pageRef   = useRef(1);
+  const lowStockRef = useRef(false);
 
   // ── List state ────────────────────────────────────────────────────────────────
-  const [items,      setItems]      = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [loadError,  setLoadError]  = useState('');
-  const [q,          setQ]          = useState('');
-  const [page,       setPage]       = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  const [items,         setItems]         = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [loadError,     setLoadError]     = useState('');
+  const [q,             setQ]             = useState('');
+  const [page,          setPage]          = useState(1);
+  const [totalItems,    setTotalItems]    = useState(0);
+  const [onlyLowStock,  setOnlyLowStock]  = useState(false);
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
-  // ── Mode: 'none' | 'add' | 'edit' ────────────────────────────────────────────
+  // ── Mode: 'none' | 'add' | 'edit' | 'adjust' ─────────────────────────────────
   const [mode,        setMode]        = useState('none');
   const [saving,      setSaving]      = useState(false);
   const [formError,   setFormError]   = useState('');
 
   // ── Edit state ────────────────────────────────────────────────────────────────
-  const [editingItem, setEditingItem] = useState(null);   // InventoryResponse row
-  const [newStock,    setNewStock]    = useState('');
+  const [editingItem,  setEditingItem]  = useState(null);
+  const [newStock,     setNewStock]     = useState('');
+  const [newThreshold, setNewThreshold] = useState('');
+
+  // ── Adjust state (Increase / Decrease) ────────────────────────────────────────
+  const [adjustItem,   setAdjustItem]   = useState(null);
+  const [adjustQty,    setAdjustQty]    = useState('');
 
   // ── Add state ─────────────────────────────────────────────────────────────────
   const [products,        setProducts]        = useState([]);
@@ -52,14 +73,15 @@ export default function Inventory() {
   const [addStock,        setAddStock]        = useState('');
 
   // ── Fetch inventory ───────────────────────────────────────────────────────────
-  async function fetchInventory(currentPage, searchTerm) {
+  async function fetchInventory(currentPage, searchTerm, lowStockOnly) {
     setLoading(true);
     setLoadError('');
     try {
-      const res  = await inventoryService.getAll({
+      const res = await inventoryService.getAll({
         page:     currentPage,
         pageSize: PAGE_SIZE,
         search:   searchTerm || undefined,
+        lowStock: lowStockOnly ? true : undefined,
       });
       setItems(res.data.items ?? []);
       setTotalItems(res.data.totalItems ?? 0);
@@ -75,7 +97,7 @@ export default function Inventory() {
   // Initial load + page changes
   useEffect(() => {
     pageRef.current = page;
-    fetchInventory(page, searchRef.current);
+    fetchInventory(page, searchRef.current, lowStockRef.current);
   }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSearch(value) {
@@ -83,11 +105,20 @@ export default function Inventory() {
     setQ(value);
     pageRef.current = 1;
     setPage(1);
-    fetchInventory(1, value);
+    fetchInventory(1, value, lowStockRef.current);
+  }
+
+  function handleToggleLowStock() {
+    const next = !onlyLowStock;
+    setOnlyLowStock(next);
+    lowStockRef.current = next;
+    pageRef.current = 1;
+    setPage(1);
+    fetchInventory(1, searchRef.current, next);
   }
 
   function refresh() {
-    fetchInventory(pageRef.current, searchRef.current);
+    fetchInventory(pageRef.current, searchRef.current, lowStockRef.current);
   }
 
   // ── Load products (for Add form) ──────────────────────────────────────────────
@@ -111,7 +142,7 @@ export default function Inventory() {
     }
   }
 
-  // ── Open Add form ─────────────────────────────────────────────────────────────
+  // ── Form Openers ─────────────────────────────────────────────────────────────
   function openAdd() {
     setMode('add');
     setSelectedProduct('');
@@ -120,35 +151,44 @@ export default function Inventory() {
     loadProducts();
   }
 
-  // ── Open Edit form ────────────────────────────────────────────────────────────
   function openEdit(item) {
     setMode('edit');
     setEditingItem(item);
     setNewStock(String(item.stockQuantity));
+    setNewThreshold(String(item.lowStockThreshold ?? 10));
     setFormError('');
   }
 
-  // ── Close any form ────────────────────────────────────────────────────────────
+  function openAdjust(item) {
+    setMode('adjust');
+    setAdjustItem(item);
+    setAdjustQty('');
+    setFormError('');
+  }
+
   function closeForm() {
     setMode('none');
     setEditingItem(null);
+    setAdjustItem(null);
     setNewStock('');
+    setNewThreshold('');
+    setAdjustQty('');
     setSelectedProduct('');
     setAddStock('');
     setFormError('');
   }
 
-  // ── Validate stock quantity ───────────────────────────────────────────────────
+  // ── Validation ───────────────────────────────────────────────────────────────
   function validateQty(raw) {
-    if (raw === '' || raw === null || raw === undefined) return 'Stock quantity is required.';
+    if (raw === '' || raw === null || raw === undefined) return 'Quantity is required.';
     const n = Number(raw);
-    if (isNaN(n))  return 'Stock quantity must be a valid number.';
-    if (n < 0)     return 'Stock quantity cannot be negative.';
-    if (!Number.isInteger(n)) return 'Stock quantity must be a whole number.';
+    if (isNaN(n))  return 'Quantity must be a valid number.';
+    if (n < 0)     return 'Quantity cannot be negative.';
+    if (!Number.isInteger(n)) return 'Quantity must be a whole number.';
     return '';
   }
 
-  // ── Submit: Add (set stock on an existing product) ────────────────────────────
+  // ── Submit: Add (set stock on a product) ──────────────────────────────────────
   async function handleAdd(event) {
     event.preventDefault();
 
@@ -176,17 +216,23 @@ export default function Inventory() {
     }
   }
 
-  // ── Submit: Update (change stock for an existing row) ─────────────────────────
+  // ── Submit: Direct Update (edit stock quantity and threshold) ────────────────
   async function handleUpdate(event) {
     event.preventDefault();
 
     const qtyError = validateQty(newStock);
     if (qtyError) { setFormError(qtyError); return; }
 
+    const thresholdNum = newThreshold !== '' ? Number(newThreshold) : undefined;
+    if (thresholdNum !== undefined && (isNaN(thresholdNum) || thresholdNum < 0)) {
+      setFormError('Low stock threshold cannot be negative.');
+      return;
+    }
+
     setSaving(true);
     setFormError('');
     try {
-      await inventoryService.updateStock(editingItem.productId, Number(newStock));
+      await inventoryService.updateStock(editingItem.productId, Number(newStock), thresholdNum);
       showToast(
         `Stock updated to ${newStock} ${editingItem.unit ?? 'units'} for "${editingItem.productName}".`,
       );
@@ -201,9 +247,48 @@ export default function Inventory() {
     }
   }
 
+  // ── Submit: Atomic Adjust (increase or decrease) ─────────────────────────────
+  async function handleAdjust(type) {
+    const qtyError = validateQty(adjustQty);
+    if (qtyError) { setFormError(qtyError); return; }
+
+    const amount = Number(adjustQty);
+    if (amount <= 0) {
+      setFormError('Adjustment quantity must be greater than 0.');
+      return;
+    }
+
+    // Client-side negative stock check
+    if (type === 'decrease' && amount > adjustItem.stockQuantity) {
+      setFormError('Insufficient stock available.');
+      showToast('Insufficient stock available.', 'error');
+      return;
+    }
+
+    setSaving(true);
+    setFormError('');
+    try {
+      const res = await inventoryService.adjustStock(adjustItem.productId, {
+        type,
+        quantity: amount,
+      });
+      const newQty = res.data.stockQuantity;
+      const actionText = type === 'increase' ? 'increased' : 'decreased';
+      showToast(`Stock ${actionText} by ${amount}. New stock: ${newQty} for "${adjustItem.productName}".`);
+      closeForm();
+      refresh();
+    } catch (err) {
+      const msg = getInventoryErrorMessage(err, 'Could not adjust stock.');
+      setFormError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // ── Derived stats ─────────────────────────────────────────────────────────────
   const outOfStockCount = items.filter((i) => i.stockQuantity === 0).length;
-  const lowStockCount   = items.filter((i) => i.stockQuantity > 0 && i.stockQuantity <= 10).length;
+  const lowStockCount   = items.filter((i) => i.isLowStock || (i.stockQuantity > 0 && i.stockQuantity <= (i.lowStockThreshold ?? 10))).length;
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
@@ -211,7 +296,7 @@ export default function Inventory() {
       {/* ── Page header ── */}
       <PageHeader
         title="Inventory"
-        description="Monitor and update stock levels across your product catalog."
+        description="Monitor and manage stock levels, low-stock thresholds, and adjustments."
         action={
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
@@ -239,7 +324,12 @@ export default function Inventory() {
       {!loading && !loadError && (
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.1rem', flexWrap: 'wrap' }}>
           {/* Total */}
-          <div className="panel" style={{ flex: '1 1 130px', padding: '0.85rem 1.1rem', minWidth: 0, marginBottom: 0 }}>
+          <div
+            className="panel"
+            style={{ flex: '1 1 130px', padding: '0.85rem 1.1rem', minWidth: 0, marginBottom: 0, cursor: 'pointer' }}
+            onClick={() => { if (onlyLowStock) handleToggleLowStock(); }}
+            title="View all products"
+          >
             <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '0.2rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
               <Boxes size={12} /> Total products
             </div>
@@ -247,14 +337,25 @@ export default function Inventory() {
           </div>
 
           {/* Low stock */}
-          {lowStockCount > 0 && (
-            <div className="panel" style={{ flex: '1 1 130px', padding: '0.85rem 1.1rem', minWidth: 0, marginBottom: 0, borderLeft: '3px solid #f59e0b' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '0.2rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                <TriangleAlert size={12} /> Low stock
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#d97706' }}>{lowStockCount}</div>
+          <div
+            className="panel"
+            style={{
+              flex: '1 1 130px',
+              padding: '0.85rem 1.1rem',
+              minWidth: 0,
+              marginBottom: 0,
+              borderLeft: '3px solid #f59e0b',
+              backgroundColor: onlyLowStock ? 'rgba(245, 158, 11, 0.08)' : undefined,
+              cursor: 'pointer',
+            }}
+            onClick={handleToggleLowStock}
+            title={onlyLowStock ? 'Show all products' : 'Filter to show low-stock products only'}
+          >
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '0.2rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+              <TriangleAlert size={12} /> Low stock {onlyLowStock && '(Active Filter)'}
             </div>
-          )}
+            <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#d97706' }}>{lowStockCount}</div>
+          </div>
 
           {/* Out of stock */}
           {outOfStockCount > 0 && (
@@ -284,7 +385,6 @@ export default function Inventory() {
           {formError && <div className="error" role="alert">{formError}</div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
-            {/* Product selector */}
             <label>
               Product <span>(required)</span>
               <select
@@ -314,7 +414,6 @@ export default function Inventory() {
               )}
             </label>
 
-            {/* Stock quantity */}
             <label>
               Stock quantity <span>(required)</span>
               <input
@@ -347,12 +446,82 @@ export default function Inventory() {
         </form>
       )}
 
-      {/* ── Edit / Update stock inline form ── */}
+      {/* ── Adjust Stock Panel (Atomic Increase / Decrease) ── */}
+      {mode === 'adjust' && adjustItem && (
+        <div className="panel" aria-label="Stock adjustment form" style={{ marginBottom: '1.1rem' }}>
+          <div className="panel-head">
+            <div>
+              <h2>Adjust Stock Level</h2>
+              <p>
+                Product: <strong>{adjustItem.productName}</strong>
+                &nbsp;&mdash;&nbsp;Current Stock:&nbsp;
+                <strong style={{ color: adjustItem.stockQuantity === 0 ? '#dc2626' : adjustItem.isLowStock ? '#d97706' : 'var(--ink)' }}>
+                  {adjustItem.stockQuantity} {adjustItem.unit ?? 'units'}
+                </strong>
+                &nbsp;&mdash;&nbsp;Threshold:&nbsp;
+                <strong>{adjustItem.lowStockThreshold ?? 10}</strong>
+              </p>
+            </div>
+            <button className="btn btn-light btn-small" type="button" onClick={closeForm} aria-label="Close adjust form">
+              <X size={14} /> Close
+            </button>
+          </div>
+
+          {formError && <div className="error" role="alert" style={{ marginBottom: '1rem' }}>{formError}</div>}
+
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
+            <label style={{ flex: '0 1 220px' }}>
+              Adjustment amount
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={adjustQty}
+                onChange={(e) => {
+                  setAdjustQty(e.target.value);
+                  setFormError('');
+                }}
+                placeholder="e.g. 10"
+                autoFocus
+                required
+                aria-label="Adjustment quantity"
+              />
+            </label>
+
+            <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: '18px' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => handleAdjust('increase')}
+                disabled={saving || !adjustQty}
+                title="Increase current stock"
+              >
+                <ArrowUpCircle size={15} /> Increase Stock
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => handleAdjust('decrease')}
+                disabled={saving || !adjustQty}
+                title="Decrease current stock"
+                style={{ backgroundColor: '#dc2626', color: '#fff' }}
+              >
+                <ArrowDownCircle size={15} /> Decrease Stock
+              </button>
+              <button type="button" className="btn btn-light" onClick={closeForm} disabled={saving}>
+                <X size={14} /> Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Direct Edit / Update stock inline form ── */}
       {mode === 'edit' && editingItem && (
         <form className="panel" onSubmit={handleUpdate} aria-label="Update stock form" style={{ marginBottom: '1.1rem' }}>
           <div className="panel-head">
             <div>
-              <h2>Update Stock</h2>
+              <h2>Update Stock &amp; Threshold</h2>
               <p>
                 Editing: <strong>{editingItem.productName}</strong>
                 &nbsp;&mdash;&nbsp;current stock:&nbsp;
@@ -367,7 +536,7 @@ export default function Inventory() {
           {formError && <div className="error" role="alert">{formError}</div>}
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <label style={{ flex: '0 1 200px' }}>
+            <label style={{ flex: '0 1 180px' }}>
               New stock quantity
               <input
                 type="number"
@@ -382,12 +551,26 @@ export default function Inventory() {
                 aria-required="true"
               />
             </label>
+
+            <label style={{ flex: '0 1 180px' }}>
+              Low stock threshold
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={newThreshold}
+                onChange={(e) => setNewThreshold(e.target.value)}
+                placeholder="Threshold (e.g. 10)"
+                aria-label="Low stock threshold"
+              />
+            </label>
+
             <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: '18px' }}>
               <button type="button" className="btn btn-light" onClick={closeForm} disabled={saving}>
                 <X size={14} /> Cancel
               </button>
               <button type="submit" className="btn btn-primary" disabled={saving}>
-                <Save size={14} /> {saving ? 'Saving…' : 'Update stock'}
+                <Save size={14} /> {saving ? 'Saving…' : 'Save changes'}
               </button>
             </div>
           </div>
@@ -411,12 +594,22 @@ export default function Inventory() {
 
       {/* ── Inventory table ── */}
       <section className="panel">
-        <div className="table-tools">
-          <SearchBox
-            value={q}
-            onChange={handleSearch}
-            placeholder="Search by product name…"
-          />
+        <div className="table-tools" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ flex: '1 1 260px' }}>
+            <SearchBox
+              value={q}
+              onChange={handleSearch}
+              placeholder="Search by product name…"
+            />
+          </div>
+          <button
+            type="button"
+            className={`btn btn-small ${onlyLowStock ? 'btn-primary' : 'btn-light'}`}
+            onClick={handleToggleLowStock}
+            aria-pressed={onlyLowStock}
+          >
+            <Filter size={13} /> {onlyLowStock ? 'Showing Low Stock Only' : 'Filter: Low Stock'}
+          </button>
         </div>
 
         {/* Loading state */}
@@ -429,8 +622,8 @@ export default function Inventory() {
         {/* Empty state */}
         {!loading && !loadError && items.length === 0 && (
           <Empty
-            title={q ? 'No products match your search' : 'No inventory records yet'}
-            text={q ? 'Try a different search term.' : 'Products will appear here once they are added to the catalog.'}
+            title={onlyLowStock ? 'No low-stock products found' : q ? 'No products match your search' : 'No inventory records yet'}
+            text={onlyLowStock ? 'All product stocks are at or above their thresholds.' : q ? 'Try a different search term.' : 'Products will appear here once they are added to the catalog.'}
           />
         )}
 
@@ -456,11 +649,16 @@ export default function Inventory() {
                   key: 'stockQuantity',
                   label: 'STOCK',
                   render: (row) => (
-                    <b style={{ fontSize: '1.05rem' }}>
+                    <b style={{ fontSize: '1.05rem', color: row.stockQuantity === 0 ? '#dc2626' : row.isLowStock ? '#d97706' : 'var(--ink)' }}>
                       {row.stockQuantity}{' '}
                       <small style={{ fontWeight: 400 }}>{row.unit ?? 'units'}</small>
                     </b>
                   ),
+                },
+                {
+                  key: 'lowStockThreshold',
+                  label: 'THRESHOLD',
+                  render: (row) => row.lowStockThreshold ?? 10,
                 },
                 {
                   key: 'unit',
@@ -470,7 +668,7 @@ export default function Inventory() {
                 {
                   key: 'status',
                   label: 'STATUS',
-                  render: (row) => <StockBadge quantity={row.stockQuantity} />,
+                  render: (row) => <StockBadge item={row} />,
                 },
                 {
                   key: 'updatedAtUtc',
@@ -484,15 +682,26 @@ export default function Inventory() {
                   key: 'actions',
                   label: 'ACTIONS',
                   render: (row) => (
-                    <button
-                      className="btn btn-light btn-small"
-                      type="button"
-                      onClick={() => openEdit(row)}
-                      aria-label={`Update stock for ${row.productName}`}
-                      title="Update stock quantity"
-                    >
-                      <Edit2 size={14} /> Update stock
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button
+                        className="btn btn-primary btn-small"
+                        type="button"
+                        onClick={() => openAdjust(row)}
+                        aria-label={`Adjust stock for ${row.productName}`}
+                        title="Quick increase / decrease stock"
+                      >
+                        <SlidersHorizontal size={13} /> Adjust stock
+                      </button>
+                      <button
+                        className="btn btn-light btn-small"
+                        type="button"
+                        onClick={() => openEdit(row)}
+                        aria-label={`Update stock for ${row.productName}`}
+                        title="Update stock quantity and threshold"
+                      >
+                        <Edit2 size={13} /> Update
+                      </button>
+                    </div>
                   ),
                 },
               ]}

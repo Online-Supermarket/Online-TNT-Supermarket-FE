@@ -26,10 +26,14 @@ identityApi.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login') && !error.config?.url?.includes('/login')) {
-        localStorage.removeItem('tnt_token');
-        localStorage.removeItem('tnt_refresh_token');
-        localStorage.removeItem('tnt_user');
-        window.location.href = '/login';
+        const token = localStorage.getItem('tnt_token');
+        // Only redirect if there's genuinely no token (truly unauthenticated)
+        if (!token) {
+          localStorage.removeItem('tnt_token');
+          localStorage.removeItem('tnt_refresh_token');
+          localStorage.removeItem('tnt_user');
+          window.location.href = '/login';
+        }
       }
     }
 
