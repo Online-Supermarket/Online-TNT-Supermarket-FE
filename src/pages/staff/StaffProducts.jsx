@@ -42,7 +42,7 @@ export default function StaffProducts() {
               {
                 key: 'price',
                 label: 'PRICE',
-                render: (r) => `$${Number(r.price || 0).toFixed(2)}`,
+                render: (r) => `Rs. ${Number(r.price || 0).toFixed(2)}`,
               },
               {
                 key: 'stock',

@@ -17,7 +17,7 @@ export default function Navbar(){
     <>
       <div className="announcement">
         <span>Fresh groceries, happier homes.</span>
-        <span>Free delivery on orders over $50</span>
+        <span>Free delivery on orders over Rs. 50</span>
         <span>Help & Support</span>
       </div>
       <header className="navbar">
