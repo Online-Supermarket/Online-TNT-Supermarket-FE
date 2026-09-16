@@ -8,8 +8,25 @@ vi.mock('../../components/ToastProvider', () => ({
   useToast: () => ({showToast: vi.fn()}),
 }));
 
+const { mockProducts } = vi.hoisted(() => ({
+  mockProducts: [
+    {
+      id: 'prod-1',
+      name: 'Apples',
+      categoryId: 'cat-1',
+      category: 'Fresh Produce',
+      price: 4.5,
+      stockQuantity: 12,
+    },
+  ],
+}));
+
 vi.mock('../../hooks/useApiCollection', () => ({
-  default: () => ({data: [{id: 'prod-1', name: 'Apples', categoryId: 'cat-1', category: 'Fresh Produce', price: 4.5, stockQuantity: 12}], loading: false, error: null}),
+  default: () => ({
+    data: mockProducts,
+    loading: false,
+    error: null,
+  }),
 }));
 
 vi.mock('../../services/categoryService', async (importOriginal) => {
