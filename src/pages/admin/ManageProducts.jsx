@@ -49,6 +49,17 @@ export default function ManageProducts() {
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(imageFile);
+    setImagePreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [imageFile]);
 
   useEffect(() => {
     if (Array.isArray(apiProducts)) {
@@ -136,30 +147,25 @@ export default function ManageProducts() {
     setFormError('');
 
     try {
-      let finalImageUrl = form.imageUrl;
+      const formData = new FormData();
+      formData.append('Name', form.name.trim());
+      if (form.description?.trim()) formData.append('Description', form.description.trim());
+      if (form.categoryId) formData.append('CategoryId', form.categoryId);
+      formData.append('Price', priceNum.toString());
+      formData.append('StockQuantity', stockNum.toString());
+      formData.append('Unit', form.unit?.trim() || 'item');
+      formData.append('IsActive', form.isActive.toString());
+      if (form.imageUrl?.trim()) formData.append('ImageUrl', form.imageUrl.trim());
+      
       if (imageFile) {
-        const formData = new FormData();
-        formData.append('file', imageFile);
-        const uploadResponse = await productService.uploadImage(formData);
-        finalImageUrl = uploadResponse.data.url;
+        formData.append('Image', imageFile);
       }
 
-      const payload = {
-        name: form.name.trim(),
-        description: form.description?.trim() || null,
-        categoryId: form.categoryId || null,
-        price: priceNum,
-        stockQuantity: stockNum,
-        unit: form.unit?.trim() || 'item',
-        imageUrl: finalImageUrl?.trim() || null,
-        isActive: form.isActive,
-      };
-
       if (editingProduct) {
-        await productService.update(editingProduct.id, payload);
+        await productService.update(editingProduct.id, formData);
         showToast('Product updated successfully.');
       } else {
-        await productService.create(payload);
+        await productService.create(formData);
         showToast('Product saved successfully.');
       }
 
@@ -271,6 +277,16 @@ export default function ManageProducts() {
                     {imageFile ? `Selected: ${imageFile.name}` : 'Existing image will be kept'}
                   </small>
                 )}
+                {(imagePreview || form.imageUrl) && (
+                  <div style={{ marginTop: '0.5rem', width: '100px', height: '100px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+                    <img
+                      src={imagePreview || form.imageUrl}
+                      alt="Preview"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=180&q=80'; }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
             <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem'}}>
@@ -359,7 +375,7 @@ export default function ManageProducts() {
               ),
             },
             {key: 'category', label: 'CATEGORY', render: (row) => row.category || 'Uncategorized'},
-            {key: 'price', label: 'PRICE', render: (row) => `$${Number(row.price || 0).toFixed(2)}`},
+            {key: 'price', label: 'PRICE', render: (row) => `Rs. ${Number(row.price || 0).toFixed(2)}`},
             {key: 'stock', label: 'STOCK', render: (row) => <span>{row.stock} {row.unit || 'units'}</span>},
             {
               key: 'available',
