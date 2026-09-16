@@ -20,11 +20,12 @@ const normalizeRole = (role) => {
 
 const normalizeUser = (user = {}) => {
   const fullName = user.fullName || user.name || user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ') || '';
+  const rawRole = user.role || user.userRole || user.Role || user.roleName || (Array.isArray(user.roles) ? user.roles[0] : null);
   const normalized = {
     ...user,
     id: user.id ?? user.identityUserId ?? null,
     email: user.email || '',
-    role: normalizeRole(user.role || user.userRole),
+    role: normalizeRole(rawRole),
     name: fullName || 'User',
     fullName: fullName || 'User',
     phone: user.phone || user.phoneNumber || '',
@@ -53,6 +54,7 @@ const mergeUserProfile = async (baseUser) => {
     const merged = normalizeUser({
       ...baseUser,
       ...profile,
+      role: baseUser.role || baseUser.userRole || baseUser.Role || profile.role || profile.userRole,
       fullName: profile.displayName || baseUser.fullName || baseUser.name,
       name: profile.displayName || baseUser.name || baseUser.fullName,
       phone: profile.phoneNumber || baseUser.phone || '',

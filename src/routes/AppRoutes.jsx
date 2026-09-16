@@ -43,13 +43,28 @@ import AssignedDeliveries from '../pages/delivery/AssignedDeliveries';
 import DeliveryHistory from '../pages/delivery/DeliveryHistory';
 import DeliveryProfile from '../pages/delivery/DeliveryProfile';
 
-/** Convenience wrapper: requires auth + the given role. */
-const Guard = ({role, children}) =>
-  <ProtectedRoute><RoleRoute roles={[role]}>{children}</RoleRoute></ProtectedRoute>;
+import { useAuth } from '../context/AuthContext';
+
+/** Convenience wrapper: requires auth + the given role(s). */
+const Guard = ({roles, role, children}) => {
+  const allowed = roles || (role ? [role] : []);
+  return <ProtectedRoute><RoleRoute roles={allowed}>{children}</RoleRoute></ProtectedRoute>;
+};
+
+function InventoryRedirect() {
+  const { role, loading } = useAuth();
+  if (loading) return null;  // wait for auth to resolve before redirecting
+  const normalized = String(role || '').toUpperCase();
+  if (normalized === 'STAFF') return <Navigate to="/staff/inventory" replace />;
+  if (normalized === 'ADMIN') return <Navigate to="/admin/inventory" replace />;
+  return <Navigate to="/login" replace />;
+}
 
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* ── Top-level /inventory redirect ─────────────────────────── */}
+      <Route path="inventory" element={<ProtectedRoute><InventoryRedirect /></ProtectedRoute>} />
       {/* ── Public / customer routes ─────────────────────────────── */}
       <Route element={<MainLayout/>}>
         <Route index element={<Home/>}/>
@@ -68,7 +83,7 @@ export default function AppRoutes() {
       <Route path="register" element={<Register/>}/>
 
       {/* ── Admin portal ─────────────────────────────────────────── */}
-      <Route path="admin" element={<Guard role="ADMIN"><AdminLayout/></Guard>}>
+      <Route path="admin" element={<Guard roles={['ADMIN', 'STAFF']}><AdminLayout/></Guard>}>
         <Route index element={<Navigate to="dashboard"/>}/>
         <Route path="dashboard"  element={<AdminDashboard/>}/>
         <Route path="users"      element={<ManageUsers/>}/>
@@ -88,7 +103,7 @@ export default function AppRoutes() {
       </Route>
 
       {/* ── Staff portal ─────────────────────────────────────────── */}
-      <Route path="staff" element={<Guard role="STAFF"><StaffLayout/></Guard>}>
+      <Route path="staff" element={<Guard roles={['ADMIN', 'STAFF']}><StaffLayout/></Guard>}>
         <Route index element={<Navigate to="dashboard"/>}/>
         <Route path="dashboard" element={<StaffDashboard/>}/>
         <Route path="products"  element={<StaffProducts/>}/>
