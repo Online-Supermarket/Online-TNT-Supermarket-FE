@@ -28,10 +28,12 @@ api.interceptors.response.use(
   (error) => {
     // Handle 401 Unauthorized - redirect to login
     if (error.response?.status === 401) {
-      localStorage.removeItem('tnt_token');
-      localStorage.removeItem('tnt_refresh_token');
-      localStorage.removeItem('tnt_user');
-      window.location.href = '/login';
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        localStorage.removeItem('tnt_token');
+        localStorage.removeItem('tnt_refresh_token');
+        localStorage.removeItem('tnt_user');
+        window.location.href = '/login';
+      }
     }
     
     // Handle 403 Forbidden

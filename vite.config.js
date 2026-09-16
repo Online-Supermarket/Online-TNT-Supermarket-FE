@@ -8,15 +8,23 @@ export default defineConfig({
     strictPort: false,
     proxy: {
       '/api/auth': {
-        target: 'http://localhost:5010',
+        target: 'http://localhost:5001',
         changeOrigin: true,
       },
       '/api/products': {
-        target: 'http://localhost:5084',
+        target: 'http://localhost:5003',
+        changeOrigin: true,
+      },
+      '/api/categories': {
+        target: 'http://localhost:5003',
+        changeOrigin: true,
+      },
+      '/api/stores': {
+        target: 'http://localhost:5003',
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost:5150',
+        target: 'http://localhost:5000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
       },

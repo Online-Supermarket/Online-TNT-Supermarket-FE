@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import identityApi, { IDENTITY_API_URL } from './identityApi';
 
 describe('identity axios client', () => {
-  it('targets the Identity service on port 5010 by default', () => {
-    expect(IDENTITY_API_URL).toBe('http://localhost:5010');
-    expect(identityApi.defaults.baseURL).toBe('http://localhost:5010');
+  it('targets the Identity service via proxy by default', () => {
+    expect(IDENTITY_API_URL).toBe('');
+    expect(identityApi.defaults.baseURL).toBe('');
   });
 
   it('attaches the stored bearer token to Identity requests', async () => {
