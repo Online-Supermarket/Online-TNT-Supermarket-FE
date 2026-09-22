@@ -1,3 +1,0 @@
-import PortalLayout from './PortalLayout';
-const items=[['/admin/dashboard','Dashboard','LayoutDashboard'],['/admin/users','Users','Users'],['/admin/products','Products','Package'],['/admin/categories','Categories','Shapes'],['/admin/inventory','Inventory','Boxes'],['/admin/orders','Orders','ClipboardList'],['/admin/offers','Offers','BadgePercent'],['/admin/staff','Staff','UserCog'],['/admin/delivery','Delivery Personnel','Truck'],['/admin/reports','Reports','BarChart3'],['/admin/profile','Profile','CircleUserRound']].map(([to,label,icon])=>({to,label,icon}));
-export default function AdminLayout(){return <PortalLayout role="Admin" items={items}/>}
