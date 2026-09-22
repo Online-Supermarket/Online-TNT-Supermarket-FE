@@ -29,6 +29,8 @@ jobs:
       - run: npm run build
         env:
           VITE_API_BASE_URL: https://example.invalid/api
+      - name: Verify compiled deployment files
+        run: node scripts/verify-static-build.mjs dist
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
