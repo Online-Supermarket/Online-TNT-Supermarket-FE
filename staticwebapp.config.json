@@ -1,9 +1,18 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "*.{css,js,ico,png,svg,jpg,jpeg,gif,webp,woff,woff2,ttf}"]
+    "exclude": ["/assets/*", "*.{css,js,mjs,ico,png,svg,jpg,jpeg,gif,webp,woff,woff2,ttf}"]
   },
   "mimeTypes": {
-    ".json": "application/json"
+    ".js": "application/javascript",
+    ".mjs": "application/javascript",
+    ".css": "text/css",
+    ".html": "text/html",
+    ".json": "application/json",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+    ".png": "image/png",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2"
   }
 }
