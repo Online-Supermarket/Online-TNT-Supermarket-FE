@@ -25,8 +25,8 @@ export const ManageProducts = () => {
   // Role checks
   const roles = user?.roles || [];
   const isOperationsAdmin = activeRole === 'ADMIN' || roles.includes('OperationsAdmin') || roles.includes('ADMIN');
-  const isCatalogStaff = activeRole === 'STAFF' || roles.includes('CatalogStaff') || roles.includes('InventoryStaff') || roles.includes('STAFF');
-  const canManage = isOperationsAdmin || isCatalogStaff;
+  const isStaff = activeRole === 'STAFF' || roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff');
+  const canManage = isOperationsAdmin || isStaff;
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -53,6 +53,8 @@ export const ManageProducts = () => {
     stockQuantity: '0',
     categoryId: '',
     imageUrl: '',
+    reorderLevel: '10',
+    targetStockLevel: '50',
   });
   const [formErrors, setFormErrors] = useState({});
   const [imagePreviewError, setImagePreviewError] = useState(false);
@@ -133,6 +135,8 @@ export const ManageProducts = () => {
       stockQuantity: '0',
       categoryId: categories.length > 0 ? categories[0].id : '',
       imageUrl: '',
+      reorderLevel: '10',
+      targetStockLevel: '50',
     });
     setFormErrors({});
     setImagePreviewError(false);
@@ -151,6 +155,8 @@ export const ManageProducts = () => {
       stockQuantity: String(product.stockQuantity ?? '0'),
       categoryId: product.categoryId || product.category?.id || (categories.length > 0 ? categories[0].id : ''),
       imageUrl: product.imageUrl || product.image_url || '',
+      reorderLevel: String(product.reorderLevel ?? '10'),
+      targetStockLevel: String(product.targetStockLevel ?? '50'),
     });
     setFormErrors({});
     setImagePreviewError(false);
@@ -168,6 +174,8 @@ export const ManageProducts = () => {
       stockQuantity: '0',
       categoryId: categories.length > 0 ? categories[0].id : '',
       imageUrl: '',
+      reorderLevel: '10',
+      targetStockLevel: '50',
     });
     setFormErrors({});
     setImagePreviewError(false);
@@ -196,6 +204,8 @@ export const ManageProducts = () => {
       stockQuantity: Number(formData.stockQuantity),
       categoryId: formData.categoryId.trim(),
       imageUrl: formData.imageUrl?.trim() || null,
+      reorderLevel: Number(formData.reorderLevel || 10),
+      targetStockLevel: Number(formData.targetStockLevel || 50),
     };
 
     try {
@@ -245,7 +255,7 @@ export const ManageProducts = () => {
         <AlertCircle size={48} style={{ color: '#dc2626', marginBottom: 16 }} />
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', marginBottom: 8 }}>Access Restricted</h2>
         <p style={{ color: 'var(--color-muted)' }}>
-          You do not have permission to manage catalog products. Only Operations Admins and Catalog Staff can access this page.
+          You do not have permission to manage catalog products. Only Operations Admins and Staff can access this page.
         </p>
       </div>
     );
@@ -587,6 +597,63 @@ export const ManageProducts = () => {
                 {formErrors.stockQuantity && (
                   <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: 4 }}>{formErrors.stockQuantity}</div>
                 )}
+              </div>
+            </div>
+
+            {/* Inventory Replenishment Thresholds */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 6 }}>
+                  Reorder Level (Alert Threshold)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.reorderLevel}
+                  onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
+                  placeholder="e.g. 10"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${formErrors.reorderLevel ? '#dc2626' : 'var(--color-border)'}`,
+                    borderRadius: 'var(--radius-sm)',
+                    outline: 'none',
+                  }}
+                />
+                {formErrors.reorderLevel && (
+                  <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: 4 }}>{formErrors.reorderLevel}</div>
+                )}
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: 3 }}>
+                  Alerts staff when stock falls to or below this level.
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 6 }}>
+                  Target Stock Level (Replenish Target)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={formData.targetStockLevel}
+                  onChange={(e) => setFormData({ ...formData, targetStockLevel: e.target.value })}
+                  placeholder="e.g. 50"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${formErrors.targetStockLevel ? '#dc2626' : 'var(--color-border)'}`,
+                    borderRadius: 'var(--radius-sm)',
+                    outline: 'none',
+                  }}
+                />
+                {formErrors.targetStockLevel && (
+                  <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: 4 }}>{formErrors.targetStockLevel}</div>
+                )}
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: 3 }}>
+                  Desired inventory quantity upon replenishment.
+                </div>
               </div>
             </div>
 

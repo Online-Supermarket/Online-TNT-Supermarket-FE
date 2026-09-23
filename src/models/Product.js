@@ -62,6 +62,9 @@ export function normalizeProduct(raw) {
 
   const stockQuantity = Number(raw.stockQuantity ?? raw.stock_quantity ?? 0);
   const imageUrl = raw.imageUrl || raw.image_url || null;
+  const reorderLevel = Number(raw.reorderLevel ?? raw.reorder_level ?? 10);
+  const targetStockLevel = Number(raw.targetStockLevel ?? raw.target_stock_level ?? 50);
+  const lastRestockedAt = raw.lastRestockedAt || raw.last_restocked_at || null;
 
   return {
     id: String(raw.id || ''),
@@ -76,6 +79,9 @@ export function normalizeProduct(raw) {
     categoryId,
     imageUrl: imageUrl ? String(imageUrl).trim() : null,
     image_url: imageUrl ? String(imageUrl).trim() : null,
+    reorderLevel,
+    targetStockLevel,
+    lastRestockedAt,
   };
 }
 
@@ -138,6 +144,23 @@ export function validateProductInput(input) {
       } catch {
         errors.imageUrl = 'Please enter a valid URL (e.g. https://example.com/item.jpg).';
       }
+    }
+  }
+
+  if (input?.reorderLevel !== undefined && input?.reorderLevel !== '') {
+    const reorderNum = Number(input.reorderLevel);
+    if (isNaN(reorderNum) || reorderNum < 0 || !Number.isInteger(reorderNum)) {
+      errors.reorderLevel = 'Reorder level must be a non-negative integer.';
+    }
+  }
+
+  if (input?.targetStockLevel !== undefined && input?.targetStockLevel !== '') {
+    const targetNum = Number(input.targetStockLevel);
+    const reorderNum = Number(input.reorderLevel ?? 10);
+    if (isNaN(targetNum) || targetNum < 0 || !Number.isInteger(targetNum)) {
+      errors.targetStockLevel = 'Target stock level must be a non-negative integer.';
+    } else if (targetNum <= reorderNum) {
+      errors.targetStockLevel = 'Target stock level must be greater than reorder level.';
     }
   }
 

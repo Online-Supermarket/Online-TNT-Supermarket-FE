@@ -26,8 +26,8 @@ export const ManageCategories = () => {
   // Role checks
   const roles = user?.roles || [];
   const isOperationsAdmin = activeRole === 'ADMIN' || roles.includes('OperationsAdmin') || roles.includes('ADMIN');
-  const isCatalogStaff = activeRole === 'STAFF' || roles.includes('CatalogStaff') || roles.includes('InventoryStaff') || roles.includes('STAFF');
-  const canManage = isOperationsAdmin || isCatalogStaff;
+  const isStaff = activeRole === 'STAFF' || roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff');
+  const canManage = isOperationsAdmin || isStaff;
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +183,7 @@ export const ManageCategories = () => {
         <AlertCircle size={48} style={{ color: '#dc2626', marginBottom: 16 }} />
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', marginBottom: 8 }}>Access Restricted</h2>
         <p style={{ color: 'var(--color-muted)' }}>
-          You do not have permission to manage categories. Only Operations Admins and Catalog Staff can access this page.
+          You do not have permission to manage categories. Only Operations Admins and Staff can access this page.
         </p>
       </div>
     );
