@@ -23,7 +23,7 @@ export const LoginPage = () => {
 
       if (roles.includes('OperationsAdmin') || roles.includes('ADMIN')) {
         navigate('/admin/dashboard');
-      } else if (roles.includes('CatalogStaff') || roles.includes('InventoryStaff') || roles.includes('STAFF')) {
+      } else if (roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff')) {
         navigate('/staff/dashboard');
       } else if (roles.includes('DeliveryDriver') || roles.includes('DELIVERY')) {
         navigate('/delivery/dashboard');

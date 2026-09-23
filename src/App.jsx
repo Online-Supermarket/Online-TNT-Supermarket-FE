@@ -102,6 +102,7 @@ export default function App() {
         <Route index element={<Navigate to="/staff/dashboard" replace />} />
         <Route path="dashboard" element={<StaffDashboard />} />
         <Route path="products" element={<StaffProducts />} />
+        <Route path="categories" element={<ManageCategories />} />
         <Route path="inventory" element={<StaffInventory />} />
         <Route path="orders" element={<StaffOrders />} />
       </Route>
