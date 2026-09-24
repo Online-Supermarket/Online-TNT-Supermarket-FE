@@ -552,7 +552,7 @@ export const ManageProducts = () => {
               {/* Price */}
               <div>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 6 }}>
-                  Price ($) <span style={{ color: '#dc2626' }}>*</span>
+                  Price (Rs.) <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <input
                   type="number"
@@ -942,7 +942,7 @@ export const ManageProducts = () => {
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px', fontWeight: 700 }}>
-                    ${Number(p.price).toFixed(2)}
+                    Rs. {Number(p.price).toFixed(2)}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <span

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { ShoppingBag, Leaf, User, LogOut, ShieldAlert, PackageCheck } from 'lucide-react';
+import { ShoppingBag, Leaf, User, LogOut, ShieldAlert, PackageCheck, Truck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
@@ -50,6 +50,11 @@ export const Navbar = () => {
           {activeRole === 'STAFF' && (
             <NavLink to="/staff/dashboard" className="nav-link" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
               <PackageCheck size={16} style={{ display: 'inline', marginRight: 4 }} /> Staff Portal
+            </NavLink>
+          )}
+          {activeRole === 'DELIVERY' && (
+            <NavLink to="/delivery/dashboard" className="nav-link" style={{ color: '#d97706', fontWeight: 700 }}>
+              <Truck size={16} style={{ display: 'inline', marginRight: 4 }} /> Rider Portal
             </NavLink>
           )}
 

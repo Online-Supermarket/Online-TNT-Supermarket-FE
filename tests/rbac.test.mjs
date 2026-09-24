@@ -6,7 +6,7 @@ console.log('=== Role Structure & Primary Role Determination ===');
 const getPrimaryRole = (roles = []) => {
   if (roles.includes('OperationsAdmin') || roles.includes('ADMIN')) return 'ADMIN';
   if (roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff')) return 'STAFF';
-  if (roles.includes('DeliveryDriver') || roles.includes('DELIVERY')) return 'DELIVERY';
+  if (roles.some(r => ['DeliveryDriver', 'DELIVERY', 'Rider', 'Courier', 'Dispatcher'].includes(r))) return 'DELIVERY';
   return 'CUSTOMER';
 };
 
@@ -14,6 +14,8 @@ assert.strictEqual(getPrimaryRole(['Staff']), 'STAFF', 'Staff role resolves to S
 assert.strictEqual(getPrimaryRole(['Customer']), 'CUSTOMER', 'Customer role resolves to CUSTOMER');
 assert.strictEqual(getPrimaryRole(['OperationsAdmin', 'Staff']), 'ADMIN', 'Admin with Staff role retains ADMIN primary role');
 assert.strictEqual(getPrimaryRole(['DeliveryDriver']), 'DELIVERY', 'DeliveryDriver resolves to DELIVERY');
+assert.strictEqual(getPrimaryRole(['Rider']), 'DELIVERY', 'Rider resolves to DELIVERY');
+assert.strictEqual(getPrimaryRole(['Courier']), 'DELIVERY', 'Courier resolves to DELIVERY');
 assert.strictEqual(getPrimaryRole(['CatalogStaff']), 'STAFF', 'Legacy CatalogStaff resolves to STAFF for backwards compatibility');
 assert.strictEqual(getPrimaryRole(['InventoryStaff']), 'STAFF', 'Legacy InventoryStaff resolves to STAFF for backwards compatibility');
 console.log('  ✓ Primary role resolution tests passed');

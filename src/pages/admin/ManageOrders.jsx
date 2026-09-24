@@ -73,7 +73,7 @@ const renderStatusIcon = (status, size = 13) => {
   }
 };
 
-const fmtMoney = (val, currency = '$') => {
+const fmtMoney = (val, currency = 'Rs. ') => {
   const num = Number(val || 0);
   return `${currency}${num.toFixed(2)}`;
 };
@@ -170,6 +170,9 @@ export const ManageOrders = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [availableRiders, setAvailableRiders] = useState([]);
+  const [assigning, setAssigning] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const showFeedback = (type, text) => {
     setFeedback({ type, text });
@@ -181,6 +184,15 @@ export const ManageOrders = () => {
     setCopiedId(label || text);
     setTimeout(() => setCopiedId(null), 2000);
   };
+
+  const openOrder = async (order) => {
+    setSelectedOrder(order);
+    try { const detail = await axiosInstance.get(`/order/staff/orders/${order.id}`); setSelectedOrder({ ...order, ...detail }); } catch (err) { showFeedback('error', err.message || 'Unable to load order details.'); }
+  };
+  const approveOrder = async () => { if (!selectedOrder) return; setActionLoading(true); try { await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/approve`, { notes: 'Approved by operations' }); showFeedback('success', 'Order approved.'); await fetchOrdersAndSummary(true); await openOrder({ ...selectedOrder, status: 'Confirmed' }); } catch (err) { showFeedback('error', err.message || 'Approval failed.'); } finally { setActionLoading(false); } };
+  const rejectOrder = async () => { if (!selectedOrder) return; const reason = window.prompt('Reason for rejecting this order:'); if (!reason?.trim()) return; setActionLoading(true); try { await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/reject`, { reason: reason.trim() }); showFeedback('success', 'Order rejected.'); setSelectedOrder({ ...selectedOrder, status: 'Rejected' }); await fetchOrdersAndSummary(true); } catch (err) { showFeedback('error', err.message || 'Rejection failed.'); } finally { setActionLoading(false); } };
+  const loadRiders = async () => { try { const riders = await axiosInstance.get('/order/staff/riders/available'); setAvailableRiders(Array.isArray(riders) ? riders : []); } catch (err) { showFeedback('error', err.message || 'Unable to load available riders.'); } };
+  const assignRider = async (riderId) => { if (!selectedOrder) return; setAssigning(true); try { await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/assign`, { riderId }); showFeedback('success', 'Rider assigned successfully.'); setSelectedOrder({ ...selectedOrder, status: 'Assigned', riderId }); await fetchOrdersAndSummary(true); } catch (err) { showFeedback('error', err.message || 'Rider assignment failed.'); } finally { setAssigning(false); } };
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
   const fetchOrdersAndSummary = useCallback(async (silent = false) => {
@@ -401,7 +413,7 @@ export const ManageOrders = () => {
     },
     {
       label: 'TAX & FEES COLLECTED',
-      value: salesReport ? fmtMoney(Number(salesReport.tax || 0) + Number(salesReport.deliveryFee || 0)) : '$0.00',
+      value: salesReport ? fmtMoney(Number(salesReport.tax || 0) + Number(salesReport.deliveryFee || 0)) : 'Rs. 0.00',
       sub: 'Fulfillment & duties',
       bg: '#f3e8ff',
       color: '#7c3aed',
@@ -709,7 +721,7 @@ export const ManageOrders = () => {
                             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
                               {/* Details button */}
                               <button
-                                onClick={() => setSelectedOrder(o)}
+                                onClick={() => openOrder(o)}
                                 title="View Order Details"
                                 style={{
                                   ...btnPrimary,
@@ -1014,7 +1026,7 @@ export const ManageOrders = () => {
                           </td>
                           <td style={tdStyle}>
                             <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
-                              {row.currency || 'USD'}
+                              Rs.
                             </span>
                           </td>
                         </tr>
@@ -1108,6 +1120,10 @@ export const ManageOrders = () => {
                 </span>
               </div>
             </div>
+
+            {selectedOrder.items?.length > 0 && <div style={{ marginBottom: 18 }}><strong>Order items</strong>{selectedOrder.items.map((item) => <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}><span>{item.name} × {item.quantity}<small style={{ display: 'block', color: '#6b7280' }}>SKU: {item.sku} · Unit: {fmtMoney(item.unitPrice)}</small></span><strong>{fmtMoney(item.lineTotal)}</strong></div>)}</div>}
+            {selectedOrder.status === 'PendingReservation' && <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}><button className="btn btn-primary" disabled={actionLoading} onClick={approveOrder}><CheckCircle size={14} /> Approve</button><button className="btn btn-outline" disabled={actionLoading} onClick={rejectOrder} style={{ color: '#b91c1c' }}><XCircle size={14} /> Reject</button></div>}
+            {selectedOrder.status === 'Confirmed' && <div style={{ marginBottom: 16 }}><button className="btn btn-outline" onClick={loadRiders}>Load Available Riders</button>{availableRiders.length > 0 && <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>{availableRiders.map((rider) => <div key={rider.riderId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #e5e7eb', borderRadius: 8, padding: 10 }}><span><strong>{rider.fullName}</strong><small style={{ display: 'block', color: '#6b7280' }}>{rider.district || 'Any zone'} · {rider.phoneNumber || 'No phone'}</small></span><button className="btn btn-primary" disabled={assigning} onClick={() => assignRider(rider.riderId)}>Assign</button></div>)}</div>}</div>}
 
             {/* Modal Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>

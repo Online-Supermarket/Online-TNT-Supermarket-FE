@@ -516,7 +516,7 @@ export const StaffInventoryManagement = () => {
                             </div>
                           </td>
                           <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 600, color: '#111827' }}>
-                            LKR {p.price?.toFixed(2) ?? '—'}
+                            Rs. {p.price?.toFixed(2) ?? '—'}
                           </td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>
                             <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
@@ -686,7 +686,7 @@ export const StaffInventoryManagement = () => {
                           <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600 }}>{row.sku}</td>
                           <td style={{ padding: '12px 16px', fontWeight: 600 }}>{row.name}</td>
                           <td style={{ padding: '12px 16px', color: '#6b7280' }}>{row.categoryName}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: 700 }}>${Number(row.price).toFixed(2)}</td>
+                          <td style={{ padding: '12px 16px', fontWeight: 700 }}>Rs. {Number(row.price).toFixed(2)}</td>
                           <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 800 }}>{row.stockQuantity}</td>
                           <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                             <span style={{

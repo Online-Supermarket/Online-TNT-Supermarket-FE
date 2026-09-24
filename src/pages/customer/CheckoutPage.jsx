@@ -1,216 +1,114 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Truck, CreditCard, Banknote, CheckCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle, Truck } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import axiosInstance from '../../services/axiosInstance';
 
+const emptyAddress = { fullName: '', fullAddress: '', district: '', contactNumber: '' };
+const newKey = () => globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}`;
+const fieldStyle = { display: 'grid', gap: 6, fontWeight: 700, fontSize: '.9rem' };
+const inputStyle = { padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: 6, font: 'inherit' };
+
 export const CheckoutPage = () => {
-  const { cartItems, total, clearCart } = useCart();
+  const { cartItems, refreshBasket } = useCart();
   const navigate = useNavigate();
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [newAddress, setNewAddress] = useState(emptyAddress);
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState('');
+  const [order, setOrder] = useState(null);
+  const [idempotencyKey] = useState(newKey);
 
-  const [paymentMethod, setPaymentMethod] = useState('COD');
-  const [placed, setPlaced] = useState(false);
-  const [orderId, setOrderId] = useState('');
-  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    Promise.all([axiosInstance.get('/order/addresses'), refreshBasket()])
+      .then(([data]) => {
+        const list = Array.isArray(data) ? data : [];
+        setAddresses(list);
+        if (list[0]) setSelectedAddressId(list[0].id);
+      })
+      .catch((err) => setError(err.message || 'Unable to load checkout.'))
+      .finally(() => setLoading(false));
+  }, [refreshBasket]);
 
-  const [address, setAddress] = useState({
-    recipientName: 'Sarah Customer',
-    phone: '+1 (555) 234-5678',
-    line1: '742 Evergreen Terrace',
-    city: 'Springfield',
-    zone: '97477',
-  });
+  const selected = useMemo(() => addresses.find((address) => address.id === selectedAddressId), [addresses, selectedAddressId]);
+  const unavailable = cartItems.some((item) => item.available === false);
+  const setAddressField = (field, value) => setNewAddress((current) => ({ ...current, [field]: value }));
 
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const saveAddress = async () => {
+    if (!newAddress.fullName.trim() || !newAddress.fullAddress.trim() || !newAddress.district.trim() || !newAddress.contactNumber.trim()) {
+      setError('Full name, full address, district, and contact number are required.');
+      return;
+    }
 
+    const payload = {
+      recipientName: newAddress.fullName.trim(),
+      line1: newAddress.fullAddress.trim(),
+      line2: null,
+      city: newAddress.district.trim(),
+      zone: newAddress.district.trim(),
+      phone: newAddress.contactNumber.trim(),
+    };
+
+    setSaving(true);
+    setError('');
     try {
-      // Attempt API backend order placement
-      const res = await axiosInstance.post('/order/orders', {
-        addressId: 'addr_default',
-        items: cartItems.map(i => ({ productId: i.id, quantity: i.quantity })),
-        paymentMethod
-      });
-      setOrderId(res.orderId || `ORD-${Math.floor(100000 + Math.random() * 900000)}`);
-      setPlaced(true);
-      clearCart();
-    } catch {
-      // Demo fallback
-      const mockId = `TNT-ORD-${Math.floor(100000 + Math.random() * 900000)}`;
-      setOrderId(mockId);
-      setPlaced(true);
-      clearCart();
+      const result = await axiosInstance.post('/order/addresses', payload);
+      const address = { ...payload, id: result.id };
+      setAddresses((current) => [...current, address]);
+      setSelectedAddressId(address.id);
+      setNewAddress(emptyAddress);
+      setShowForm(false);
+    } catch (err) {
+      setError(err.message || 'Unable to save address.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  if (placed) {
-    return (
-      <div style={{ maxWidth: 640, margin: '60px auto', padding: '0 24px' }}>
-        <div style={{ background: '#ffffff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 48, textAlign: 'center', boxShadow: 'var(--shadow-lg)' }}>
-          <CheckCircle size={64} color="var(--color-primary)" style={{ margin: '0 auto 20px' }} />
-          <span className="kicker-badge">ORDER CONFIRMED</span>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.4rem', color: 'var(--color-primary-dark)', margin: '12px 0' }}>
-            Thank You for Your Order!
-          </h1>
-          <p style={{ color: 'var(--color-muted)', fontSize: '1.05rem', marginBottom: 24 }}>
-            Order <strong>#{orderId}</strong> has been received and sent to our packing queue.
-          </p>
+  const placeOrder = async (event) => {
+    event.preventDefault();
+    if (!selectedAddressId) return setError('Select a delivery address.');
+    if (!cartItems.length) return setError('Your basket is empty.');
+    if (unavailable) return setError('Remove unavailable products before checkout.');
 
-          <div style={{ background: 'var(--color-soft-mint)', padding: 20, borderRadius: 'var(--radius-md)', marginBottom: 32, textAlign: 'left' }}>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>🚚 Estimated Delivery Window:</div>
-            <div style={{ color: 'var(--color-primary)', fontWeight: 800, fontSize: '1.1rem' }}>Today in 28 - 35 minutes</div>
-          </div>
+    setPlacing(true);
+    setError('');
+    try {
+      setOrder(await axiosInstance.post('/order/orders', { addressId: selectedAddressId }, { headers: { 'Idempotency-Key': idempotencyKey } }));
+      await refreshBasket();
+    } catch (err) {
+      setError(err.message || 'Unable to place order.');
+    } finally {
+      setPlacing(false);
+    }
+  };
 
-          <button className="btn btn-primary" onClick={() => navigate('/orders')}>
-            View Order Status <ArrowRight size={18} />
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (order) return <div style={{ maxWidth: 640, margin: '60px auto', textAlign: 'center' }}><CheckCircle size={64} color="var(--color-primary)" /><h1>Order received</h1><p>Order <strong>#{order.orderId}</strong> is {order.status}.</p><button className="btn btn-primary" onClick={() => navigate('/orders')}>View My Orders</button></div>;
 
-  return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px 80px' }}>
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.5rem', color: 'var(--color-primary-dark)', marginBottom: 24 }}>
-        Express Checkout
-      </h1>
-
-      <form onSubmit={handlePlaceOrder} style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 32 }}>
-        {/* LEFT: SHIPPING & PAYMENT DETAILS */}
-        <div style={{ display: 'grid', gap: 24 }}>
-          {/* Address Box */}
-          <div style={{ background: '#ffffff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 28 }}>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Truck size={20} color="var(--color-primary)" /> Delivery Address
-            </h2>
-
-            <div style={{ display: 'grid', gap: 16 }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 6 }}>Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={address.recipientName}
-                  onChange={(e) => setAddress({ ...address, recipientName: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', outline: 'none' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 6 }}>Phone Number</label>
-                  <input
-                    type="text"
-                    required
-                    value={address.phone}
-                    onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', outline: 'none' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 6 }}>Zip / Postal Code</label>
-                  <input
-                    type="text"
-                    required
-                    value={address.zone}
-                    onChange={(e) => setAddress({ ...address, zone: e.target.value })}
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', outline: 'none' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 6 }}>Street Address</label>
-                <input
-                  type="text"
-                  required
-                  value={address.line1}
-                  onChange={(e) => setAddress({ ...address, line1: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', outline: 'none' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Method Selector */}
-          <div style={{ background: '#ffffff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 28 }}>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <CreditCard size={20} color="var(--color-primary)" /> Payment Method
-            </h2>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div
-                onClick={() => setPaymentMethod('COD')}
-                style={{
-                  border: `2px solid ${paymentMethod === 'COD' ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                  background: paymentMethod === 'COD' ? 'var(--color-soft-mint)' : '#ffffff',
-                  borderRadius: 'var(--radius-md)',
-                  padding: 20,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                }}
-              >
-                <Banknote size={24} color="var(--color-primary)" />
-                <div>
-                  <div style={{ fontWeight: 700 }}>Cash on Delivery</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>Pay upon doorstep arrival</div>
-                </div>
-              </div>
-
-              <div
-                onClick={() => setPaymentMethod('CARD')}
-                style={{
-                  border: `2px solid ${paymentMethod === 'CARD' ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                  background: paymentMethod === 'CARD' ? 'var(--color-soft-mint)' : '#ffffff',
-                  borderRadius: 'var(--radius-md)',
-                  padding: 20,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                }}
-              >
-                <CreditCard size={24} color="var(--color-primary)" />
-                <div>
-                  <div style={{ fontWeight: 700 }}>Credit / Debit Card</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>100% Encrypted Payment</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: SUMMARY & PLACE ORDER BUTTON */}
-        <div style={{ background: '#ffffff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 28, height: 'fit-content' }}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', marginBottom: 20 }}>Order Items</h2>
-
-          <div style={{ display: 'grid', gap: 12, marginBottom: 24, maxHeight: 200, overflowY: 'auto' }}>
-            {cartItems.map((item) => (
-              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                <span>{item.name} × {item.quantity}</span>
-                <strong>${(item.price * item.quantity).toFixed(2)}</strong>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16, marginBottom: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
-              <span>Total Pay</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <button className="btn btn-primary" style={{ width: '100%', padding: '14px 20px' }} disabled={loading}>
-            {loading ? 'Processing Order...' : 'Place Order Now'}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+  return <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
+    <h1 style={{ fontFamily: 'var(--font-serif)', color: 'var(--color-primary-dark)' }}>Express Checkout</h1>
+    {error && <div role="alert" style={{ color: '#b91c1c', padding: 12 }}>{error}</div>}
+    {loading ? <p>Loading checkout…</p> : <form onSubmit={placeOrder}>
+      <section style={{ background: '#fff', padding: 28, borderRadius: 8 }}>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Truck size={20} /> Delivery Address</h2>
+        {addresses.map((address) => <label key={address.id} style={{ display: 'block', padding: 12, border: `2px solid ${selectedAddressId === address.id ? 'var(--color-primary)' : 'var(--color-border)'}`, borderRadius: 6, marginTop: 10 }}>
+          <input type="radio" name="address" checked={selectedAddressId === address.id} onChange={() => setSelectedAddressId(address.id)} /> {address.recipientName}
+          <div style={{ marginLeft: 22 }}>{address.line1}, {address.city} · {address.phone}</div>
+        </label>)}
+        <button type="button" className="btn btn-outline" onClick={() => setShowForm((current) => !current)} style={{ marginTop: 16 }}>{showForm ? 'Close' : 'Add New Address'}</button>
+        {showForm && <div style={{ display: 'grid', gap: 14, marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--color-border)' }}>
+          <label style={fieldStyle}>Full Name <span style={{ color: '#dc2626' }}>*</span><input required value={newAddress.fullName} onChange={(event) => setAddressField('fullName', event.target.value)} style={inputStyle} /></label>
+          <label style={fieldStyle}>Full Address <span style={{ color: '#dc2626' }}>*</span><textarea required rows="3" value={newAddress.fullAddress} onChange={(event) => setAddressField('fullAddress', event.target.value)} style={inputStyle} /></label>
+          <label style={fieldStyle}>District <span style={{ color: '#dc2626' }}>*</span><input required value={newAddress.district} onChange={(event) => setAddressField('district', event.target.value)} style={inputStyle} /></label>
+          <label style={fieldStyle}>Contact Number <span style={{ color: '#dc2626' }}>*</span><input required type="tel" value={newAddress.contactNumber} onChange={(event) => setAddressField('contactNumber', event.target.value)} style={inputStyle} /></label>
+          <button type="button" className="btn btn-primary" onClick={saveAddress} disabled={saving}>{saving ? 'Saving…' : 'Save Address'}</button>
+        </div>}
+        <button className="btn btn-primary" style={{ marginTop: 28, width: '100%' }} disabled={placing || !selected || !cartItems.length || unavailable}>{placing ? 'Processing…' : 'Place Order'}</button>
+      </section>
+    </form>}
+  </div>;
 };

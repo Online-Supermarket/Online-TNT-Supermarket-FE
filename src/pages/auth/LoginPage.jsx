@@ -25,7 +25,7 @@ export const LoginPage = () => {
         navigate('/admin/dashboard');
       } else if (roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff')) {
         navigate('/staff/dashboard');
-      } else if (roles.includes('DeliveryDriver') || roles.includes('DELIVERY')) {
+      } else if (roles.some(r => ['DeliveryDriver', 'DELIVERY', 'Rider', 'Courier', 'Dispatcher'].includes(r))) {
         navigate('/delivery/dashboard');
       } else {
         const from = location.state?.from?.pathname || '/';
@@ -127,7 +127,7 @@ export const LoginPage = () => {
                 <Package size={14} /> Staff
               </button>
               <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('DELIVERY')}>
-                <Truck size={14} /> Driver
+                <Truck size={14} /> Rider / Driver
               </button>
             </div>
           </div>

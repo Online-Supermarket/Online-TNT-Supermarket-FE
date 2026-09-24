@@ -1,90 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Package } from 'lucide-react';
 import axiosInstance from '../../services/axiosInstance';
 
+
 export const OrderHistoryPage = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    axiosInstance.get('/order/orders')
-      .then((data) => {
-        if (data && data.length > 0) setOrders(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  const getStatusBadge = (status) => {
-    const key = status.toUpperCase();
-    if (key === 'OUT_FOR_DELIVERY') return <span className="status-pill status-out_for_delivery">Out for Delivery</span>;
-    if (key === 'DELIVERED') return <span className="status-pill status-delivered">Delivered</span>;
-    if (key === 'CONFIRMED') return <span className="status-pill status-confirmed">Confirmed</span>;
-    if (key === 'PROCESSING') return <span className="status-pill status-processing">Processing</span>;
-    if (key === 'CANCELLED') return <span className="status-pill status-cancelled">Cancelled</span>;
-    return <span className="status-pill status-pending">Pending</span>;
-  };
-
-  return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px 80px' }}>
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.5rem', color: 'var(--color-primary-dark)', marginBottom: 8 }}>
-        My Order History
-      </h1>
-      <p style={{ color: 'var(--color-muted)', marginBottom: 32 }}>Track active doorstep deliveries and past grocery receipts.</p>
-
-      {loading ? (
-        <div style={{ background: '#ffffff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 60, textAlign: 'center' }}>
-          <p style={{ color: 'var(--color-muted)' }}>Loading your orders...</p>
-        </div>
-      ) : orders.length === 0 ? (
-        <div style={{ background: '#ffffff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 60, textAlign: 'center' }}>
-          <Package size={48} color="var(--color-muted)" style={{ margin: '0 auto 16px' }} />
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', marginBottom: 8 }}>No Orders Yet</h2>
-          <p style={{ color: 'var(--color-muted)' }}>Your order history will appear here once you place your first order.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 20 }}>
-          {orders.map((o) => (
-            <div
-              key={o.id}
-              style={{
-                background: '#ffffff',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: 24,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                boxShadow: 'var(--shadow-sm)',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                  <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>#{o.id}</span>
-                  {getStatusBadge(o.status)}
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-                  Ordered on {new Date(o.createdAt).toLocaleString()} · {o.itemsCount || 0} items
-                </div>
-                {o.driverName && (
-                  <div style={{ fontSize: '0.85rem', color: 'var(--color-primary)', fontWeight: 600, marginTop: 4 }}>
-                    🚚 Driver: {o.driverName} {o.estimatedMinutes ? `(Arriving in ~${o.estimatedMinutes} mins)` : ''}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
-                  ${Number(o.total).toFixed(2)}
-                </div>
-                <button className="btn btn-outline" style={{ marginTop: 8, fontSize: '0.8rem', padding: '6px 12px' }}>
-                  View Receipt
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const [orders, setOrders] = useState([]); const [selected, setSelected] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [cancelling, setCancelling] = useState(false);
+  const load = useCallback(async () => { setLoading(true); setError(''); try { const data = await axiosInstance.get('/order/orders/my'); setOrders(Array.isArray(data) ? data : []); } catch (err) { setError(err.message || 'Unable to load orders.'); } finally { setLoading(false); } }, []);
+  useEffect(() => { load(); }, [load]);
+  const open = async (id) => { setError(''); try { setSelected(await axiosInstance.get(`/order/orders/${id}`)); } catch (err) { setError(err.message || 'Unable to load order details.'); } };
+  const cancel = async () => { if (!selected) return; setCancelling(true); try { await axiosInstance.post(`/order/orders/${selected.id}/cancel`, { reason: 'Cancelled by customer' }); await load(); await open(selected.id); } catch (err) { setError(err.message || 'Unable to cancel this order.'); } finally { setCancelling(false); } };
+  const badge = (status) => <span className={`status-pill status-${String(status || 'pending').toLowerCase()}`}>{status}</span>;
+  return <div style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px 80px' }}><h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.5rem', color: 'var(--color-primary-dark)', marginBottom: 8 }}>My Order History</h1><p style={{ color: 'var(--color-muted)', marginBottom: 32 }}>Track active deliveries and review your receipts.</p>{error && <div role="alert" style={{ color: '#b91c1c', marginBottom: 16 }}>{error}</div>}{loading ? <div>Loading your orders…</div> : orders.length === 0 ? <div style={{ background: '#fff', padding: 60, textAlign: 'center' }}><Package size={48} color="var(--color-muted)" style={{ margin: '0 auto 16px' }} /><h2>No Orders Yet</h2><p style={{ color: 'var(--color-muted)' }}>Your order history will appear here after checkout.</p></div> : <div style={{ display: 'grid', gap: 16 }}>{orders.map((order) => <div key={order.id} style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: 8, padding: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><strong>#{order.id}</strong>{badge(order.status)}</div><div style={{ color: 'var(--color-muted)', marginTop: 8 }}>{new Date(order.createdAt).toLocaleString()} · {order.itemCount || 0} items</div><div style={{ color: 'var(--color-muted)', fontSize: '.9rem', marginTop: 4 }}>{order.address?.line1}, {order.address?.city}</div></div><div style={{ textAlign: 'right' }}><strong style={{ fontSize: '1.3rem', color: 'var(--color-primary-dark)' }}>{order.currency || 'Rs.'} {Number(order.total || 0).toFixed(2)}</strong><br /><button className="btn btn-outline" style={{ marginTop: 8 }} onClick={() => open(order.id)}>View Details</button></div></div>)}</div>}{selected && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'grid', placeItems: 'center', padding: 20 }}><div style={{ background: '#fff', borderRadius: 12, padding: 28, maxWidth: 680, width: '100%', maxHeight: '85vh', overflow: 'auto' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><h2>Order #{selected.id}</h2><button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button></div><p>{badge(selected.status)} · {selected.currency} {Number(selected.total).toFixed(2)}</p><h3>Items</h3>{selected.items?.map((item) => <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}><span>{item.name} × {item.quantity}</span><strong>{selected.currency} {Number(item.lineTotal).toFixed(2)}</strong></div>)}<h3>Status history</h3>{selected.statusHistory?.map((entry, index) => <div key={`${entry.changedAt}-${index}`} style={{ padding: '6px 0', color: 'var(--color-muted)' }}>{new Date(entry.changedAt).toLocaleString()} — {entry.status}{entry.reason ? ` (${entry.reason})` : ''}</div>)}{selected.status === 'Confirmed' && <button className="btn btn-outline" disabled={cancelling} onClick={cancel} style={{ marginTop: 16, color: '#b91c1c' }}>{cancelling ? 'Cancelling…' : 'Cancel Order'}</button>}</div></div>}</div>;
 };

@@ -5,7 +5,7 @@ export const CSSBarChart = ({ data = [] }) => {
 
   return (
     <div className="chart-card">
-      <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', marginBottom: 16 }}>Weekly Revenue Growth ($)</h3>
+      <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', marginBottom: 16 }}>Weekly Revenue Growth (Rs.)</h3>
       {data.length === 0 ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: 'var(--color-muted)', fontSize: '0.9rem' }}>
           No chart data available.
@@ -19,7 +19,7 @@ export const CSSBarChart = ({ data = [] }) => {
                 <div
                   className="bar-fill"
                   style={{ height: `${heightPercent}%` }}
-                  title={`$${item.value * 120}`}
+                  title={`Rs. ${item.value * 120}`}
                 />
                 <span className="bar-label">{item.label}</span>
               </div>

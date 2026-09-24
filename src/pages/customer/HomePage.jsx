@@ -92,7 +92,7 @@ export const HomePage = () => {
           <div className="benefit-icon"><Truck size={24} /></div>
           <div>
             <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Free Express Delivery</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>On orders over $50</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>On orders over Rs. 50</div>
           </div>
         </div>
         <div className="benefit-card">

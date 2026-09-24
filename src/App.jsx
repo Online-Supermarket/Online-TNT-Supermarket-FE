@@ -35,6 +35,10 @@ import { ManageInventory } from './pages/admin/ManageInventory';
 import { ManageOrders } from './pages/admin/ManageOrders';
 import { ManageOffers } from './pages/admin/ManageOffers';
 import { AdminReports } from './pages/admin/AdminReports';
+import { AdminStaffManagement } from './pages/admin/AdminStaffManagement';
+import { AdminRiderManagement } from './pages/admin/AdminRiderManagement';
+import { AdminCustomerManagement } from './pages/admin/AdminCustomerManagement';
+
 
 // Staff Pages
 import { StaffDashboard } from './pages/staff/StaffDashboard';
@@ -81,9 +85,13 @@ export default function App() {
       >
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="customers" element={<AdminCustomerManagement />} />
+        <Route path="staff" element={<AdminStaffManagement />} />
+        <Route path="riders" element={<AdminRiderManagement />} />
         <Route path="users" element={<ManageUsers />} />
         <Route path="products" element={<ManageProducts />} />
         <Route path="categories" element={<ManageCategories />} />
+
         <Route path="inventory" element={<ManageInventory />} />
         <Route path="orders" element={<ManageOrders />} />
         <Route path="offers" element={<ManageOffers />} />

@@ -29,7 +29,7 @@ export const DEMO_USERS = {
     email: 'driver@marketflow.local',
     password: 'ChangeMe!123',
     displayName: 'Dave Driver',
-    roles: ['DeliveryDriver'],
+    roles: ['Rider', 'DeliveryDriver', 'Courier'],
     role: 'DELIVERY',
   },
 };
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
   const getPrimaryRole = (roles = []) => {
     if (roles.includes('OperationsAdmin') || roles.includes('ADMIN')) return 'ADMIN';
     if (roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff')) return 'STAFF';
-    if (roles.includes('DeliveryDriver') || roles.includes('DELIVERY')) return 'DELIVERY';
+    if (roles.some(r => ['DeliveryDriver', 'DELIVERY', 'Rider', 'Courier', 'Dispatcher'].includes(r))) return 'DELIVERY';
     return 'CUSTOMER';
   };
 

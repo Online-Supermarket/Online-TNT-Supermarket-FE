@@ -29,7 +29,7 @@ export const ManageOffers = () => {
               <tr key={o.id}>
                 <td><strong>{o.name}</strong></td>
                 <td>{o.category}</td>
-                <td><strong>${o.price.toFixed(2)}</strong> (was ${o.originalPrice.toFixed(2)})</td>
+                <td><strong>Rs. {o.price.toFixed(2)}</strong> (was Rs. {o.originalPrice.toFixed(2)})</td>
                 <td><span className="product-card-badge" style={{ position: 'static' }}>{o.discountBadge}</span></td>
                 <td><span className="status-pill status-delivered">Active Promo</span></td>
               </tr>

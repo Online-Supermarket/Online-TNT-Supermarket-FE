@@ -59,10 +59,10 @@ export const ProductCard = ({ product }) => {
 
         <div className="product-price-row">
           <div>
-            <span className="price-tag">${price.toFixed(2)}</span>
+            <span className="price-tag">Rs. {price.toFixed(2)}</span>
             {originalPrice && (
               <span style={{ textDecoration: 'line-through', color: 'var(--color-muted)', fontSize: '0.85rem', marginLeft: 6 }}>
-                ${originalPrice.toFixed(2)}
+                Rs. {originalPrice.toFixed(2)}
               </span>
             )}
           </div>
