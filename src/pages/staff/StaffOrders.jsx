@@ -78,7 +78,7 @@ function PipelineBar({ status }) {
   );
 }
 
-function OrderRow({ order, onCancel, cancelling }) {
+function OrderRow({ order, onCancel, onApprove, onReject, cancelling, acting }) {
   const [expanded, setExpanded] = useState(false);
   const [reason, setReason] = useState('');
   const [showCancel, setShowCancel] = useState(false);
@@ -126,7 +126,7 @@ function OrderRow({ order, onCancel, cancelling }) {
         <div style={{ minWidth: 90, textAlign: 'right' }}>
           <div style={{ fontSize: '0.68rem', color: 'var(--color-muted)', fontWeight: 700 }}>TOTAL</div>
           <div style={{ fontWeight: 800, color: 'var(--color-primary-dark)', fontSize: '1rem' }}>
-            ${Number(order.total).toFixed(2)}
+            Rs. {Number(order.total).toFixed(2)}
           </div>
         </div>
 
@@ -155,7 +155,7 @@ function OrderRow({ order, onCancel, cancelling }) {
             </div>
             <div>
               <div style={{ fontSize: '0.72rem', color: 'var(--color-muted)', fontWeight: 700, marginBottom: 2 }}>SUBTOTAL</div>
-              <span style={{ fontWeight: 700 }}>${Number(order.subtotal ?? order.total).toFixed(2)}</span>
+              <span style={{ fontWeight: 700 }}>Rs. {Number(order.subtotal ?? order.total).toFixed(2)}</span>
             </div>
             <div>
               <div style={{ fontSize: '0.72rem', color: 'var(--color-muted)', fontWeight: 700, marginBottom: 2 }}>FULL ORDER ID</div>
@@ -204,6 +204,7 @@ function OrderRow({ order, onCancel, cancelling }) {
               )}
             </div>
           )}
+          {order.status === 'PendingReservation' && <div style={{ display: 'flex', gap: 8, marginTop: 10 }}><button className="btn btn-primary" disabled={acting} onClick={(e) => { e.stopPropagation(); onApprove(order.id); }}><CheckCircle size={14} /> Approve</button><button className="btn btn-outline" disabled={acting} onClick={(e) => { e.stopPropagation(); onReject(order.id); }} style={{ color: '#b91c1c' }}><Ban size={14} /> Reject</button></div>}
         </div>
       )}
     </div>
@@ -229,6 +230,7 @@ export const StaffOrders = () => {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
   const [cancelling, setCancelling] = useState(null); // orderId being cancelled
+  const [acting, setActing] = useState(null);
   const [toast, setToast]           = useState('');
   const [filter, setFilter]         = useState('ALL');
 
@@ -261,6 +263,8 @@ export const StaffOrders = () => {
       setCancelling(null);
     }
   };
+  const handleApprove = async (orderId) => { setActing(orderId); try { await axiosInstance.post(`/order/staff/orders/${orderId}/approve`, { notes: 'Approved by staff' }); showToast('Order approved.'); await fetchOrders(); } catch (err) { showToast(`Approve failed: ${err.message}`); } finally { setActing(null); } };
+  const handleReject = async (orderId) => { const reason = window.prompt('Reason for rejecting this order:'); if (!reason?.trim()) return; setActing(orderId); try { await axiosInstance.post(`/order/staff/orders/${orderId}/reject`, { reason: reason.trim() }); showToast('Order rejected.'); await fetchOrders(); } catch (err) { showToast(`Reject failed: ${err.message}`); } finally { setActing(null); } };
 
   const showToast = (msg) => {
     setToast(msg);
@@ -373,7 +377,10 @@ export const StaffOrders = () => {
               key={order.id}
               order={order}
               onCancel={handleCancel}
+              onApprove={handleApprove}
+              onReject={handleReject}
               cancelling={cancelling === order.id}
+              acting={acting === order.id}
             />
           ))}
         </div>

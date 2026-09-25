@@ -465,15 +465,23 @@ body {
 .portal-container {
   display: flex;
   min-height: 100vh;
+  width: 100%;
 }
 .sidebar-panel {
   width: 260px;
+  min-width: 260px;
+  max-width: 260px;
+  flex-shrink: 0;
   background: var(--color-primary-dark);
   color: #ffffff;
   display: flex;
   flex-direction: column;
   padding: 24px 16px;
-  transition: width 0.2s ease;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 .sidebar-brand {
   display: flex;
@@ -481,6 +489,7 @@ body {
   gap: 12px;
   margin-bottom: 36px;
   padding: 0 8px;
+  flex-shrink: 0;
 }
 .sidebar-menu {
   display: flex;
@@ -499,6 +508,7 @@ body {
   font-weight: 600;
   font-size: 0.95rem;
   transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 .sidebar-link:hover, .sidebar-link.active {
   background: rgba(255, 255, 255, 0.12);
@@ -507,8 +517,10 @@ body {
 
 .portal-main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 .portal-header {
   background: #ffffff;
@@ -517,10 +529,13 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 .portal-body {
   padding: 32px;
   flex: 1;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 /* STATS KPI CARDS */
@@ -697,6 +712,11 @@ body {
   }
   .sidebar-panel {
     width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    height: auto;
+    position: relative;
+    top: 0;
   }
   .auth-split-container {
     grid-template-columns: 1fr;

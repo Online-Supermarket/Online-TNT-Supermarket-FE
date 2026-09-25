@@ -25,8 +25,13 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const message = error.response?.data?.message || error.message || 'An unexpected error occurred';
-    return Promise.reject(new Error(message));
+    const payload = error.response?.data;
+    const validation = payload?.errors && Object.entries(payload.errors).map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`).join(' | ');
+    const message = payload?.message || payload?.error || validation || payload?.title || error.message || 'An unexpected error occurred';
+    const normalized = new Error(message);
+    normalized.status = error.response?.status;
+    normalized.details = payload;
+    return Promise.reject(normalized);
   }
 );
 

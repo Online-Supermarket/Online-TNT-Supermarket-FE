@@ -191,7 +191,7 @@ export const ShopPage = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '0.85rem', marginBottom: 8 }}>
               <span>Max Price</span>
               <span style={{ color: 'var(--color-primary)' }}>
-                {userSetMax ? `$${maxPrice.toLocaleString()}` : 'Any'}
+                {userSetMax ? `Rs. ${maxPrice.toLocaleString()}` : 'Any'}
               </span>
             </div>
             <input

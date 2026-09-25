@@ -90,7 +90,7 @@ export const QuickViewModal = ({ product, onClose }) => {
             </p>
 
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: 20 }}>
-              ${Number(product.price).toFixed(2)}
+              Rs. {Number(product.price).toFixed(2)}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>

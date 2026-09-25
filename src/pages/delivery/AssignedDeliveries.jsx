@@ -60,7 +60,7 @@ export const AssignedDeliveries = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border)', paddingTop: 16 }}>
                 <div>
                   <span style={{ color: 'var(--color-muted)', fontSize: '0.85rem' }}>Total Package:</span>{' '}
-                  <strong>{item.itemsCount} Items (${item.total.toFixed(2)})</strong>
+                  <strong>{item.itemsCount} Items (Rs. {item.total.toFixed(2)})</strong>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

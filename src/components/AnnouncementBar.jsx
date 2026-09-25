@@ -10,7 +10,7 @@ export const AnnouncementBar = () => {
       </div>
       <div className="announcement-item" style={{ fontWeight: 600 }}>
         <Truck size={16} />
-        <span>Free express delivery on orders over $50</span>
+        <span>Free express delivery on orders over Rs. 50</span>
       </div>
       <div className="announcement-item">
         <PhoneCall size={16} />
