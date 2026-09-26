@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { ShoppingBag, Leaf, User, LogOut, ShieldAlert, PackageCheck, Truck } from 'lucide-react';
+import { ShoppingBag, Leaf, User, LogOut, ShieldAlert, PackageCheck, Truck, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { roleHome } from '../utils/roles';
 
 export const Navbar = () => {
   const { user, activeRole, logout } = useAuth();
   const { cartCount } = useCart();
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
 
 
@@ -24,7 +26,10 @@ export const Navbar = () => {
           </div>
         </Link>
 
-        <nav className="nav-menu">
+        <button className="mobile-menu-toggle" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        <nav className={`nav-menu ${menuOpen ? 'is-open' : ''}`} onClick={() => setMenuOpen(false)}>
           <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
             Home
           </NavLink>
@@ -42,17 +47,17 @@ export const Navbar = () => {
           </NavLink>
 
           {/* Quick jump to active role portal */}
-          {activeRole === 'ADMIN' && (
+          {activeRole === 'Admin' && (
             <NavLink to="/admin/dashboard" className="nav-link" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
               <ShieldAlert size={16} style={{ display: 'inline', marginRight: 4 }} /> Admin Portal
             </NavLink>
           )}
-          {activeRole === 'STAFF' && (
+          {activeRole === 'Staff' && (
             <NavLink to="/staff/dashboard" className="nav-link" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
               <PackageCheck size={16} style={{ display: 'inline', marginRight: 4 }} /> Staff Portal
             </NavLink>
           )}
-          {activeRole === 'DELIVERY' && (
+          {activeRole === 'Rider' && (
             <NavLink to="/delivery/dashboard" className="nav-link" style={{ color: '#d97706', fontWeight: 700 }}>
               <Truck size={16} style={{ display: 'inline', marginRight: 4 }} /> Rider Portal
             </NavLink>
@@ -60,7 +65,7 @@ export const Navbar = () => {
 
         </nav>
 
-        <div className="nav-actions">
+        <div className={`nav-actions ${menuOpen ? 'is-open' : ''}`}>
 
 
           <Link to="/cart" className="btn btn-cart">
@@ -71,7 +76,7 @@ export const Navbar = () => {
 
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Link to="/orders" className="btn btn-ghost" title="My Orders">
+              <Link to={roleHome(activeRole)} className="btn btn-ghost" title={activeRole === 'Customer' ? 'My Orders' : `${activeRole || 'Account'} Dashboard`}>
                 <User size={18} />
                 <span style={{ fontSize: '0.85rem' }}>{user.displayName || 'Account'}</span>
               </Link>
