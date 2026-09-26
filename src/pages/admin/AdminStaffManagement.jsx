@@ -21,7 +21,7 @@ const SUPERMARKET_STORES = [
 
 export const AdminStaffManagement = () => {
   const { user, activeRole } = useAuth();
-  const isAdmin = activeRole === 'ADMIN' || (user?.roles || []).includes('OperationsAdmin');
+  const isAdmin = activeRole === 'Admin' || (user?.roles || []).includes('Admin');
 
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);

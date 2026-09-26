@@ -11,7 +11,7 @@ import { UserDetailsModal } from '../../components/admin/UserDetailsModal';
 
 export const AdminRiderManagement = () => {
   const { user, activeRole } = useAuth();
-  const isAdmin = activeRole === 'ADMIN' || (user?.roles || []).includes('OperationsAdmin');
+  const isAdmin = activeRole === 'Admin' || (user?.roles || []).includes('Admin');
 
   const [riders, setRiders] = useState([]);
   const [loading, setLoading] = useState(true);
