@@ -1,36 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getPrimaryRole } from '../utils/roles';
 import axiosInstance from '../services/axiosInstance';
 
 const AuthContext = createContext(null);
 
 export const DEMO_USERS = {
-  CUSTOMER: {
+  Customer: {
     email: 'customer@marketflow.local',
     password: 'ChangeMe!123',
     displayName: 'Sarah Customer',
     roles: ['Customer'],
-    role: 'CUSTOMER',
+    role: 'Customer',
   },
-  ADMIN: {
+  Admin: {
     email: 'admin@marketflow.local',
     password: 'ChangeMe!123',
     displayName: 'Alex Admin',
-    roles: ['OperationsAdmin'],
-    role: 'ADMIN',
+    roles: ['Admin'],
+    role: 'Admin',
   },
-  STAFF: {
+  Staff: {
     email: 'staff@marketflow.local',
     password: 'ChangeMe!123',
     displayName: 'Sam Staff',
     roles: ['Staff'],
-    role: 'STAFF',
+    role: 'Staff',
   },
-  DELIVERY: {
+  Rider: {
     email: 'driver@marketflow.local',
     password: 'ChangeMe!123',
     displayName: 'Dave Driver',
-    roles: ['Rider', 'DeliveryDriver', 'Courier'],
-    role: 'DELIVERY',
+    roles: ['Rider'],
+    role: 'Rider',
   },
 };
 
@@ -38,19 +39,14 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('marketflowToken') || '');
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('marketflowUser');
-    return saved ? JSON.parse(saved) : null;
+    try { return saved ? JSON.parse(saved) : null; } catch { return null; }
   });
 
-  const getPrimaryRole = (roles = []) => {
-    if (roles.includes('OperationsAdmin') || roles.includes('ADMIN')) return 'ADMIN';
-    if (roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff')) return 'STAFF';
-    if (roles.some(r => ['DeliveryDriver', 'DELIVERY', 'Rider', 'Courier', 'Dispatcher'].includes(r))) return 'DELIVERY';
-    return 'CUSTOMER';
-  };
+  const [authLoading, setAuthLoading] = useState(!!token);
 
   const [activeRole, setActiveRole] = useState(() => {
     if (user?.roles) return getPrimaryRole(user.roles);
-    return 'CUSTOMER';
+    return 'Customer';
   });
 
   useEffect(() => {
@@ -58,6 +54,27 @@ export const AuthProvider = ({ children }) => {
       setActiveRole(getPrimaryRole(user.roles));
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!token) { setAuthLoading(false); return; }
+    let cancelled = false;
+    setAuthLoading(true);
+    axiosInstance.get('/identity/users/me').then(current => {
+      if (cancelled) return;
+      setUser(current);
+      localStorage.setItem('marketflowUser', JSON.stringify(current));
+    }).catch(() => {
+      if (!cancelled) {
+        // A token can outlive its server-side session. Remove both cached
+        // credentials so a stale session cannot keep sending 401 requests.
+        localStorage.removeItem('marketflowToken');
+        localStorage.removeItem('marketflowUser');
+        setToken('');
+        setUser(null);
+      }
+    }).finally(() => { if (!cancelled) setAuthLoading(false); });
+    return () => { cancelled = true; };
+  }, [token]);
 
   const login = async (email, password) => {
     try {
@@ -72,22 +89,6 @@ export const AuthProvider = ({ children }) => {
       setActiveRole(role);
       return userInfo;
     } catch (err) {
-      // Fallback for offline demo mode only if API is completely unreachable
-      const matchedDemo = Object.values(DEMO_USERS).find((d) => d.email === email);
-      if (matchedDemo && (!err.response || err.response.status >= 500)) {
-        const fallbackUser = {
-          id: `usr_${matchedDemo.role.toLowerCase()}`,
-          email: matchedDemo.email,
-          displayName: matchedDemo.displayName,
-          roles: matchedDemo.roles,
-        };
-        localStorage.setItem('marketflowToken', `demo_token_${matchedDemo.role.toLowerCase()}`);
-        localStorage.setItem('marketflowUser', JSON.stringify(fallbackUser));
-        setToken(`demo_token_${matchedDemo.role.toLowerCase()}`);
-        setUser(fallbackUser);
-        setActiveRole(matchedDemo.role);
-        return fallbackUser;
-      }
       throw err;
     }
   };
@@ -103,7 +104,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('marketflowUser', JSON.stringify(data.user));
     setToken(data.accessToken);
     setUser(data.user);
-    setActiveRole('CUSTOMER');
+    setActiveRole('Customer');
     return data.user;
   };
 
@@ -111,11 +112,15 @@ export const AuthProvider = ({ children }) => {
     try {
       await axiosInstance.post('/identity/auth/logout');
     } catch {}
+    clearSession();
+  };
+
+  const clearSession = () => {
     localStorage.removeItem('marketflowToken');
     localStorage.removeItem('marketflowUser');
     setToken('');
     setUser(null);
-    setActiveRole('CUSTOMER');
+    setActiveRole('Customer');
   };
 
   const switchDemoRole = (roleKey) => {
@@ -131,10 +136,12 @@ export const AuthProvider = ({ children }) => {
         token,
         user,
         activeRole,
-        isAuthenticated: !!user,
+        isAuthenticated: !!token && !!user,
+        authLoading,
         login,
         register,
         logout,
+        clearSession,
         switchDemoRole,
       }}
     >

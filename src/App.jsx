@@ -66,11 +66,11 @@ export default function App() {
         <Route path="/offers" element={<OffersPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/cart" element={<CartPage />} />
+        <Route path="/cart" element={<RoleRoute allowedRoles={['Customer']}><CartPage /></RoleRoute>} />
 
         {/* Protected Customer Routes */}
-        <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
-        <Route path="/orders" element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
+        <Route path="/checkout" element={<RoleRoute allowedRoles={['Customer']}><CheckoutPage /></RoleRoute>} />
+        <Route path="/orders" element={<RoleRoute allowedRoles={['Customer']}><OrderHistoryPage /></RoleRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       </Route>
 
@@ -78,7 +78,7 @@ export default function App() {
       <Route
         path="/admin"
         element={
-          <RoleRoute allowedRoles={['ADMIN']}>
+          <RoleRoute allowedRoles={['Admin']}>
             <AdminLayout />
           </RoleRoute>
         }
@@ -102,7 +102,7 @@ export default function App() {
       <Route
         path="/staff"
         element={
-          <RoleRoute allowedRoles={['STAFF', 'ADMIN']}>
+          <RoleRoute allowedRoles={['Staff', 'Admin']}>
             <StaffLayout />
           </RoleRoute>
         }
@@ -113,13 +113,14 @@ export default function App() {
         <Route path="categories" element={<ManageCategories />} />
         <Route path="inventory" element={<StaffInventory />} />
         <Route path="orders" element={<StaffOrders />} />
+        <Route path="reports" element={<AdminReports />} />
       </Route>
 
       {/* Delivery Driver Portal Layout */}
       <Route
         path="/delivery"
         element={
-          <RoleRoute allowedRoles={['DELIVERY', 'ADMIN']}>
+          <RoleRoute allowedRoles={['Rider', 'Admin']}>
             <DeliveryLayout />
           </RoleRoute>
         }
