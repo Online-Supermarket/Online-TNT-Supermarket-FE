@@ -1,11 +1,12 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, Layers, Warehouse, ShoppingCart, Tag, BarChart3, ArrowLeft, Truck, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Layers, Warehouse, ShoppingCart, Tag, BarChart3, ArrowLeft, Truck, UserCheck, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const AdminSidebar = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [open, setOpen] = React.useState(false);
 
   const handleBackToShop = async () => {
     await logout();
@@ -13,7 +14,8 @@ export const AdminSidebar = () => {
   };
 
   return (
-    <aside className="sidebar-panel">
+    <aside className={`sidebar-panel ${open ? 'is-open' : ''}`}>
+      <button className="sidebar-toggle" aria-label="Toggle admin navigation" onClick={() => setOpen((value) => !value)}>{open ? <X size={20} /> : <Menu size={20} />}<span>Menu</span></button>
       <div className="sidebar-brand">
         <div style={{ background: 'var(--color-primary)', width: 36, height: 36, borderRadius: 8, display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
           A
@@ -24,7 +26,7 @@ export const AdminSidebar = () => {
         </div>
       </div>
 
-      <nav className="sidebar-menu">
+      <nav className="sidebar-menu" onClick={() => setOpen(false)}>
         <NavLink to="/admin/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <LayoutDashboard size={18} /> Dashboard
         </NavLink>

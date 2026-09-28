@@ -2,12 +2,17 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
+import { PRODUCT_PLACEHOLDER_IMAGE } from '../../models/Product';
 
 export const CartPage = () => {
-  const { cartItems, updateQuantity, removeFromCart, subtotal, tax, shipping, total, loading, error, basket } = useCart();
+  const { cartItems, updateQuantity, removeFromCart, subtotal, shipping, total, loading, error, basket, beginCheckout } = useCart();
   const navigate = useNavigate();
 
   const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
+  const proceedToCheckout = () => {
+    const snapshot = beginCheckout();
+    if (snapshot) navigate('/checkout', { state: { checkoutSnapshot: snapshot } });
+  };
 
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '40px 24px 80px' }}>
@@ -16,7 +21,7 @@ export const CartPage = () => {
       </h1>
 
       {loading ? <div style={{ padding: 40 }}>Loading your basket…</div> : error ? <div role="alert" style={{ color: '#b91c1c' }}>{error}</div> : cartItems.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32 }}>
+        <div className="cart-page-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 360px)', gap: 32 }}>
           {/* LEFT: CART ITEMS LIST */}
           <div>
 
@@ -24,6 +29,7 @@ export const CartPage = () => {
               {cartItems.map((item) => (
                 <div
                   key={item.id}
+                  className="cart-item-row"
                   style={{
                     background: '#ffffff',
                     border: '1px solid var(--color-border)',
@@ -35,8 +41,13 @@ export const CartPage = () => {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 64, height: 64, background: 'var(--color-soft-mint)', borderRadius: 'var(--radius-sm)', display: 'grid', placeItems: 'center', fontSize: '2rem' }}>
-                      {item.image || '🥗'}
+                    <div style={{ width: 72, height: 72, flex: '0 0 72px', background: 'var(--color-soft-mint)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                      <img
+                        src={item.image || PRODUCT_PLACEHOLDER_IMAGE}
+                        alt={item.name ? `${item.name} product` : 'Product'}
+                        onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = PRODUCT_PLACEHOLDER_IMAGE; }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
                     </div>
                     <div>
                       <span className="product-category-tag">{item.category}</span>
@@ -44,14 +55,17 @@ export const CartPage = () => {
                       <div style={{ fontWeight: 700, color: 'var(--color-primary-dark)', marginTop: 4 }}>
                         {money(item.price)} each
                       </div>
+                      <div style={{ fontSize: '0.8rem', color: item.stockQuantity > 0 ? 'var(--color-muted)' : '#b91c1c', marginTop: 4 }}>
+                        {item.stockQuantity > 0 ? `${item.stockQuantity} items available` : 'Out of stock'}
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                  <div className="cart-item-actions" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
                     <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)' }}>
                       <button className="btn btn-ghost" style={{ padding: '4px 12px' }} onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
                       <span style={{ fontWeight: 700, padding: '0 8px' }}>{item.quantity}</span>
-                      <button className="btn btn-ghost" style={{ padding: '4px 12px' }} onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
+                      <button className="btn btn-ghost" style={{ padding: '4px 12px', opacity: item.quantity >= item.stockQuantity ? 0.45 : 1 }} disabled={item.quantity >= item.stockQuantity} title={item.quantity >= item.stockQuantity ? `Only ${item.stockQuantity} items are available in stock.` : 'Increase quantity'} onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
                     </div>
 
                     <div style={{ fontWeight: 800, fontSize: '1.2rem', minWidth: 80, textAlign: 'right' }}>
@@ -77,10 +91,6 @@ export const CartPage = () => {
                 <strong>{money(subtotal)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--color-muted)' }}>Tax</span>
-                <strong>{money(tax)}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--color-muted)' }}>Express Shipping</span>
                 <strong>{money(shipping)}</strong>
               </div>
@@ -91,7 +101,7 @@ export const CartPage = () => {
               <span>{money(total)}</span>
             </div>
 
-            <button className="btn btn-primary" style={{ width: '100%', marginBottom: 16 }} onClick={() => navigate('/checkout')}>
+            <button className="btn btn-primary" style={{ width: '100%', marginBottom: 16 }} onClick={proceedToCheckout}>
               Proceed to Checkout <ArrowRight size={18} />
             </button>
 

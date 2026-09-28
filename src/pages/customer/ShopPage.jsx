@@ -139,7 +139,7 @@ export const ShopPage = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 32 }}>
+      <div className="shop-layout" style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 32 }}>
         {/* SIDEBAR FILTERS */}
         <aside style={{ background: '#ffffff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 24, height: 'fit-content' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: '1.1rem', marginBottom: 20, color: 'var(--color-primary-dark)' }}>

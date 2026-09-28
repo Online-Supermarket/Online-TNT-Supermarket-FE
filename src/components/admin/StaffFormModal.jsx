@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Shield, Lock, Mail, Phone, User, CheckCircle2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { isSriLankanPhone, normalizeSriLankanPhone } from '../../utils/identityValidation';
 
 /* ── helpers ── */
 const pwStrength = (p) => {
@@ -93,7 +94,7 @@ export const StaffFormModal = ({ isOpen, mode = 'create', staff = null, onClose,
     if (!fullName.trim()) errs.fullName = 'Full name is required.';
     if (!email.trim()) errs.email = 'Email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Enter a valid email address.';
-    if (!phoneNumber.trim()) errs.phoneNumber = 'Phone number is required.';
+    if (!phoneNumber.trim() || !isSriLankanPhone(phoneNumber)) errs.phoneNumber = 'Please enter a valid Sri Lankan phone number.';
     if (mode === 'create') {
       if (!password) errs.password = 'Password is required.';
       else if (password.length < 8) errs.password = 'Min 8 characters.';
@@ -109,7 +110,7 @@ export const StaffFormModal = ({ isOpen, mode = 'create', staff = null, onClose,
     if (!validate()) return;
     setSubmitting(true);
     try {
-      await onSave({ fullName: fullName.trim(), email: email.trim(), phoneNumber: phoneNumber.trim(), status, role: 'Staff', ...(mode === 'create' ? { password } : {}) });
+      await onSave({ fullName: fullName.trim(), email: email.trim(), phoneNumber: normalizeSriLankanPhone(phoneNumber), status, role: 'Staff', ...(mode === 'create' ? { password } : {}) });
     } catch (err) {
       setErrors(p => ({ ...p, api: err?.message || 'Operation failed. Please try again.' }));
     } finally { setSubmitting(false); }

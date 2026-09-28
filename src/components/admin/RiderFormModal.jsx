@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Truck, Lock, Mail, Phone, User, CheckCircle2, Eye, EyeOff, AlertCircle, Zap, Clock, WifiOff, Car, Hash, FileText, MapPin, Home } from 'lucide-react';
+import { isLicenseNumber, isSriLankanPhone, isVehicleNumber, normalizeSriLankanPhone, normalizeVehicleIdentifier } from '../../utils/identityValidation';
 
 const VEHICLE_TYPES = [
   { value: '', label: 'Select vehicle type…' },
@@ -123,13 +124,13 @@ export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose,
     if (!fullName.trim()) errs.fullName = 'Full name is required.';
     if (!email.trim()) errs.email = 'Email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Enter a valid email address.';
-    if (!phoneNumber.trim()) errs.phoneNumber = 'Phone number is required.';
+    if (!phoneNumber.trim() || !isSriLankanPhone(phoneNumber)) errs.phoneNumber = 'Please enter a valid Sri Lankan phone number.';
     if (!district.trim()) errs.district = 'District is required.';
     if (!address.trim()) errs.address = 'Address is required.';
     if (!vehicleType.trim()) errs.vehicleType = 'Vehicle type is required.';
     if (!vehicleModel.trim()) errs.vehicleModel = 'Vehicle model is required.';
-    if (!vehicleNumber.trim()) errs.vehicleNumber = 'Vehicle number is required.';
-    if (!licenseNumber.trim()) errs.licenseNumber = 'License number is required.';
+    if (!isVehicleNumber(vehicleNumber)) errs.vehicleNumber = 'Please enter a valid vehicle/plate number.';
+    if (!isLicenseNumber(licenseNumber)) errs.licenseNumber = 'Please enter a valid driving license number.';
     if (mode === 'create') {
       if (!password) errs.password = 'Password is required.';
       else if (password.length < 8) errs.password = 'Min 8 characters.';
@@ -148,7 +149,7 @@ export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose,
       await onSave({
         fullName: fullName.trim(),
         email: email.trim(),
-        phoneNumber: phoneNumber.trim(),
+        phoneNumber: normalizeSriLankanPhone(phoneNumber),
         district: district.trim(),
         address: address.trim(),
         status,
@@ -156,8 +157,8 @@ export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose,
         role: 'Rider',
         vehicleType: vehicleType.trim(),
         vehicleModel: vehicleModel.trim(),
-        vehicleNumber: vehicleNumber.trim(),
-        licenseNumber: licenseNumber.trim(),
+        vehicleNumber: normalizeVehicleIdentifier(vehicleNumber),
+        licenseNumber: licenseNumber.trim().toUpperCase(),
         ...(mode === 'create' ? { password } : {})
       });
     } catch (err) {

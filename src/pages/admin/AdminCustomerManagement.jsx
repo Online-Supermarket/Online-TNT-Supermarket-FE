@@ -246,7 +246,7 @@ export const AdminCustomerManagement = () => {
               onClick={() => setShowAddModal(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, height: 42, background: '#059669', borderColor: '#059669' }}
             >
-              <Plus size={18} /> + Add Customer
+              <Plus size={18} />  Add Customer
             </button>
           </div>
         )}
