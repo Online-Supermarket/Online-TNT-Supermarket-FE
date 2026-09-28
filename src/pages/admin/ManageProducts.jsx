@@ -24,9 +24,9 @@ export const ManageProducts = () => {
 
   // Role checks
   const roles = user?.roles || [];
-  const isOperationsAdmin = activeRole === 'ADMIN' || roles.includes('OperationsAdmin') || roles.includes('ADMIN');
-  const isStaff = activeRole === 'STAFF' || roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff');
-  const canManage = isOperationsAdmin || isStaff;
+  const isAdmin = activeRole === 'Admin' || roles.includes('Admin');
+  const isStaff = activeRole === 'Staff' || roles.includes('Staff');
+  const canManage = isAdmin || isStaff;
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -967,7 +967,7 @@ export const ManageProducts = () => {
                       >
                         <Edit2 size={16} />
                       </button>
-                      {isOperationsAdmin && (
+                      {isAdmin && (
                         <button
                           className="btn btn-ghost"
                           style={{ padding: 6, color: '#7f1d1d' }}

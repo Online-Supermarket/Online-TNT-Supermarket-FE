@@ -25,9 +25,9 @@ export const ManageCategories = () => {
 
   // Role checks
   const roles = user?.roles || [];
-  const isOperationsAdmin = activeRole === 'ADMIN' || roles.includes('OperationsAdmin') || roles.includes('ADMIN');
-  const isStaff = activeRole === 'STAFF' || roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff');
-  const canManage = isOperationsAdmin || isStaff;
+  const isAdmin = activeRole === 'Admin' || roles.includes('Admin');
+  const isStaff = activeRole === 'Staff' || roles.includes('Staff');
+  const canManage = isAdmin || isStaff;
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);

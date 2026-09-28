@@ -13,14 +13,14 @@ export const CartProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const applyBasket = (data) => setBasket({ lines: Array.isArray(data?.lines) ? data.lines : [], subtotal: Number(data?.subtotal || 0), tax: Number(data?.tax || 0), deliveryFee: Number(data?.deliveryFee || 0), total: Number(data?.total || 0), currency: data?.currency || 'Rs.' });
   const refreshBasket = useCallback(async () => {
-    if (!token || activeRole !== 'CUSTOMER') { setBasket(emptyBasket); return emptyBasket; }
+    if (!token || activeRole !== 'Customer') { setBasket(emptyBasket); return emptyBasket; }
     setLoading(true); setError(null);
     try { const data = await axiosInstance.get('/order/basket'); applyBasket(data); return data; }
     catch (err) { setError(err.message || 'Unable to load your basket.'); throw err; }
     finally { setLoading(false); }
   }, [token, activeRole]);
   useEffect(() => { refreshBasket().catch(() => {}); }, [refreshBasket]);
-  const requireCustomer = () => { if (!token || activeRole !== 'CUSTOMER') throw new Error('Sign in as a customer to manage a basket.'); };
+  const requireCustomer = () => { if (!token || activeRole !== 'Customer') throw new Error('Sign in as a customer to manage a basket.'); };
   const removeFromCart = async (productId) => { requireCustomer(); const data = await axiosInstance.delete(`/order/basket/items/${productId}`); applyBasket(data); return data; };
   const setQuantity = async (productId, quantity) => { requireCustomer(); if (quantity <= 0) return removeFromCart(productId); const data = await axiosInstance.put(`/order/basket/items/${productId}`, { quantity }); applyBasket(data); return data; };
   const addToCart = async (product, quantity = 1) => setQuantity(product.id, (basket.lines.find((line) => line.productId === product.id)?.quantity || 0) + quantity);

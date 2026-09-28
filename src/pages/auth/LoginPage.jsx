@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { getPrimaryRole, roleHome } from '../../utils/roles';
 import { useAuth, DEMO_USERS } from '../../context/AuthContext';
 import { Leaf, Lock, Mail, ShieldAlert, Package, Truck, User, ArrowLeft } from 'lucide-react';
 
@@ -19,18 +20,9 @@ export const LoginPage = () => {
     setLoading(true);
     try {
       const loggedUser = await login(email, password);
-      const roles = loggedUser.roles || [];
-
-      if (roles.includes('OperationsAdmin') || roles.includes('ADMIN')) {
-        navigate('/admin/dashboard');
-      } else if (roles.includes('Staff') || roles.includes('STAFF') || roles.includes('CatalogStaff') || roles.includes('InventoryStaff')) {
-        navigate('/staff/dashboard');
-      } else if (roles.some(r => ['DeliveryDriver', 'DELIVERY', 'Rider', 'Courier', 'Dispatcher'].includes(r))) {
-        navigate('/delivery/dashboard');
-      } else {
-        const from = location.state?.from?.pathname || '/';
-        navigate(from);
-      }
+      const role = getPrimaryRole(loggedUser.roles);
+      if (!role) { setError('Your account needs a role review. Please contact an administrator.'); return; }
+      navigate(role === 'Customer' ? (location.state?.from?.pathname || '/') : roleHome(role));
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -117,17 +109,17 @@ export const LoginPage = () => {
               ⚡ Quick Demo Login (Click to Auto-fill):
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('CUSTOMER')}>
+              <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('Customer')}>
                 <User size={14} /> Customer
               </button>
-              <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('ADMIN')}>
+              <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('Admin')}>
                 <ShieldAlert size={14} /> Admin
               </button>
-              <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('STAFF')}>
+              <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('Staff')}>
                 <Package size={14} /> Staff
               </button>
-              <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('DELIVERY')}>
-                <Truck size={14} /> Rider / Driver
+              <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '6px 8px' }} type="button" onClick={() => handleDemoFill('Rider')}>
+                <Truck size={14} /> Rider
               </button>
             </div>
           </div>

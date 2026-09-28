@@ -2,13 +2,18 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Package, CheckCircle, Clock, AlertTriangle, XCircle, Search,
   Filter, RefreshCw, X, ChevronDown, ChevronUp, Download,
-  DollarSign, BarChart2, Eye, Ban, Copy, Check, FileText,
-  ShoppingBag, ShieldAlert, ArrowRight, Truck, Info
+  DollarSign, BarChart2, Eye, Copy, Check, FileText,
+  ShoppingBag, ArrowRight, Truck, Info,
+  Building2, Banknote
 } from 'lucide-react';
-import axiosInstance from '../../services/axiosInstance';
+import axiosInstance, { apiUrl } from '../../services/axiosInstance';
 
 // ── Helpers & Formatters ────────────────────────────────────────────────────
 const statusConfig = {
+  Pending: {
+    bg: '#fef3c7', color: '#b45309', border: '#fde68a', label: 'Pending',
+    desc: 'Waiting for staff confirmation.'
+  },
   Confirmed: {
     bg: '#dcfce7',
     color: '#15803d',
@@ -16,19 +21,19 @@ const statusConfig = {
     label: 'Confirmed',
     desc: 'Inventory reserved & payment confirmed. Ready for fulfillment.'
   },
-  PendingReservation: {
-    bg: '#fef3c7',
-    color: '#b45309',
-    border: '#fde68a',
-    label: 'Pending Reservation',
-    desc: 'Waiting for stock reservation reconciliation with Catalog Service.'
+  Delivery: {
+    bg: '#dbeafe',
+    color: '#1d4ed8',
+    border: '#bfdbfe',
+    label: 'Delivery',
+    desc: 'The assigned rider is delivering this order.'
   },
-  CancellationPending: {
-    bg: '#ede9fe',
-    color: '#6d28d9',
-    border: '#ddd6fe',
-    label: 'Cancellation Pending',
-    desc: 'Cancellation initiated; stock release in progress.'
+  Delivered: {
+    bg: '#dcfce7',
+    color: '#15803d',
+    border: '#bbf7d0',
+    label: 'Delivered',
+    desc: 'This order has been delivered.'
   },
   Cancelled: {
     bg: '#fee2e2',
@@ -60,10 +65,12 @@ const renderStatusIcon = (status, size = 13) => {
   switch (status) {
     case 'Confirmed':
       return <CheckCircle size={size} />;
-    case 'PendingReservation':
+    case 'Delivery':
+      return <Truck size={size} />;
+    case 'Delivered':
+      return <CheckCircle size={size} />;
+    case 'Pending':
       return <Clock size={size} />;
-    case 'CancellationPending':
-      return <AlertTriangle size={size} />;
     case 'Cancelled':
       return <XCircle size={size} />;
     case 'Rejected':
@@ -166,11 +173,13 @@ export const ManageOrders = () => {
 
   // Modals
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [cancelModalOrder, setCancelModalOrder] = useState(null);
-  const [cancelReason, setCancelReason] = useState('');
-  const [cancelling, setCancelling] = useState(false);
+  const [confirmModalOrder, setConfirmModalOrder] = useState(null);
+  const [rejectModalOrder, setRejectModalOrder] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
   const [copiedId, setCopiedId] = useState(null);
   const [availableRiders, setAvailableRiders] = useState([]);
+  const [ridersLoading, setRidersLoading] = useState(false);
+  const [selectedRiderId, setSelectedRiderId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -187,12 +196,134 @@ export const ManageOrders = () => {
 
   const openOrder = async (order) => {
     setSelectedOrder(order);
-    try { const detail = await axiosInstance.get(`/order/staff/orders/${order.id}`); setSelectedOrder({ ...order, ...detail }); } catch (err) { showFeedback('error', err.message || 'Unable to load order details.'); }
+    setAvailableRiders([]);
+    setSelectedRiderId('');
+    try {
+      const detail = await axiosInstance.get(`/order/staff/orders/${order.id}`);
+      const fullOrder = { ...order, ...detail };
+      setSelectedOrder(fullOrder);
+      if (fullOrder.status === 'Confirmed') await loadRiders();
+    } catch (err) { showFeedback('error', err.message || 'Unable to load order details.'); }
   };
-  const approveOrder = async () => { if (!selectedOrder) return; setActionLoading(true); try { await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/approve`, { notes: 'Approved by operations' }); showFeedback('success', 'Order approved.'); await fetchOrdersAndSummary(true); await openOrder({ ...selectedOrder, status: 'Confirmed' }); } catch (err) { showFeedback('error', err.message || 'Approval failed.'); } finally { setActionLoading(false); } };
-  const rejectOrder = async () => { if (!selectedOrder) return; const reason = window.prompt('Reason for rejecting this order:'); if (!reason?.trim()) return; setActionLoading(true); try { await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/reject`, { reason: reason.trim() }); showFeedback('success', 'Order rejected.'); setSelectedOrder({ ...selectedOrder, status: 'Rejected' }); await fetchOrdersAndSummary(true); } catch (err) { showFeedback('error', err.message || 'Rejection failed.'); } finally { setActionLoading(false); } };
-  const loadRiders = async () => { try { const riders = await axiosInstance.get('/order/staff/riders/available'); setAvailableRiders(Array.isArray(riders) ? riders : []); } catch (err) { showFeedback('error', err.message || 'Unable to load available riders.'); } };
-  const assignRider = async (riderId) => { if (!selectedOrder) return; setAssigning(true); try { await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/assign`, { riderId }); showFeedback('success', 'Rider assigned successfully.'); setSelectedOrder({ ...selectedOrder, status: 'Assigned', riderId }); await fetchOrdersAndSummary(true); } catch (err) { showFeedback('error', err.message || 'Rider assignment failed.'); } finally { setAssigning(false); } };
+  const confirmOrder = async (order = selectedOrder) => {
+    if (!order || order.status !== 'Pending') return;
+    setActionLoading(true);
+    try {
+      await axiosInstance.post(`/order/staff/orders/${order.id}/confirm`, { notes: 'Confirmed by operations' });
+      showFeedback('success', 'Order confirmed. It is ready for rider assignment.');
+      setConfirmModalOrder(null);
+      if (selectedOrder?.id === order.id) setSelectedOrder(current => current ? { ...current, status: 'Confirmed' } : null);
+      await fetchOrdersAndSummary(true);
+    } catch (err) { showFeedback('error', err.message || 'Confirmation failed.'); }
+    finally { setActionLoading(false); }
+  };
+  const rejectOrder = async (order = selectedOrder) => {
+    if (!order || order.status !== 'Pending' || !rejectReason.trim()) return;
+    setActionLoading(true);
+    try {
+      await axiosInstance.post(`/order/staff/orders/${order.id}/reject`, { reason: rejectReason.trim() });
+      showFeedback('success', 'Order rejected.');
+      setRejectModalOrder(null);
+      if (selectedOrder?.id === order.id) setSelectedOrder(current => current ? { ...current, status: 'Rejected' } : null);
+      setRejectReason('');
+      await fetchOrdersAndSummary(true);
+    } catch (err) { showFeedback('error', err.message || 'Rejection failed.'); }
+    finally { setActionLoading(false); }
+  };
+  const loadRiders = async () => {
+    setRidersLoading(true);
+    try {
+      const riders = await axiosInstance.get('/order/staff/riders/available');
+      setAvailableRiders(Array.isArray(riders) ? riders : []);
+    } catch (err) {
+      setAvailableRiders([]);
+      showFeedback('error', err.message || 'Unable to load available riders.');
+    } finally { setRidersLoading(false); }
+  };
+  const assignRider = async () => {
+    if (!selectedOrder || !selectedRiderId) return;
+    setAssigning(true);
+    try {
+      await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/assign`, { riderId: selectedRiderId });
+      showFeedback('success', 'Rider assigned successfully.');
+      setSelectedOrder({ ...selectedOrder, assignedRiderId: selectedRiderId });
+      await fetchOrdersAndSummary(true);
+    } catch (err) { showFeedback('error', err.message || 'Rider assignment failed.'); } finally { setAssigning(false); }
+  };
+  const startDelivery = async () => {
+    if (!selectedOrder?.assignedRiderId) {
+      showFeedback('error', 'Please assign a rider before starting delivery.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/start-delivery`);
+      setSelectedOrder({ ...selectedOrder, status: 'Delivery' });
+      showFeedback('success', 'Delivery started successfully.');
+      await fetchOrdersAndSummary(true);
+    } catch (err) { showFeedback('error', err.message || 'Unable to start delivery.'); } finally { setActionLoading(false); }
+  };
+  const markDelivered = async () => {
+    if (!selectedOrder) return;
+    setActionLoading(true);
+    try {
+      await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/deliver`);
+      setSelectedOrder({ ...selectedOrder, status: 'Delivered' });
+      showFeedback('success', 'Order marked as delivered.');
+      await fetchOrdersAndSummary(true);
+    } catch (err) { showFeedback('error', err.message || 'Unable to mark this order as delivered.'); } finally { setActionLoading(false); }
+  };
+
+  const [receiptLoading, setReceiptLoading] = useState(false);
+
+  const viewReceipt = async (orderId, fileName) => {
+    if (receiptLoading) return;
+    setReceiptLoading(true);
+    try {
+      const response = await axiosInstance.get(`/order/orders/${orderId}/payment/receipt`, {
+        responseType: 'blob',
+      });
+      const blob = response instanceof Blob ? response : new Blob([response], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      showFeedback('error', err.message || 'Unable to load payment receipt.');
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
+  const verifyPayment = async () => {
+    if (!selectedOrder) return;
+    setActionLoading(true);
+    try {
+      await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/payment/verify`);
+      showFeedback('success', 'Payment verified successfully.');
+      await fetchOrdersAndSummary(true);
+      await openOrder({ ...selectedOrder, paymentStatus: 'Verified' });
+    } catch (err) {
+      showFeedback('error', err.message || 'Payment verification failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const rejectPayment = async () => {
+    if (!selectedOrder) return;
+    const reason = window.prompt('Reason for rejecting this payment receipt:');
+    if (!reason?.trim()) return;
+    setActionLoading(true);
+    try {
+      await axiosInstance.post(`/order/staff/orders/${selectedOrder.id}/payment/reject`, { reason: reason.trim() });
+      showFeedback('success', 'Payment rejected.');
+      await fetchOrdersAndSummary(true);
+      await openOrder({ ...selectedOrder, paymentStatus: 'Rejected', rejectionReason: reason.trim() });
+    } catch (err) {
+      showFeedback('error', err.message || 'Payment rejection failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
   const fetchOrdersAndSummary = useCallback(async (silent = false) => {
@@ -262,9 +393,7 @@ export const ManageOrders = () => {
 
       const qs = params.toString() ? `?${params.toString()}` : '';
       const token = localStorage.getItem('marketflowToken');
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-      
-      const response = await fetch(`${baseUrl}/order/reports/sales/export${qs}`, {
+      const response = await fetch(apiUrl(`/order/reports/sales/export${qs}`), {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
@@ -287,35 +416,6 @@ export const ManageOrders = () => {
       showFeedback('error', err.message || 'Failed to export CSV report.');
     } finally {
       setExporting(false);
-    }
-  };
-
-  // ── Cancellation Handler ──────────────────────────────────────────────────
-  const handleCancelOrder = async () => {
-    if (!cancelModalOrder) return;
-    if (!cancelReason.trim()) {
-      showFeedback('error', 'Please provide a reason for cancelling this order.');
-      return;
-    }
-
-    setCancelling(true);
-    try {
-      await axiosInstance.post(`/order/staff/orders/${cancelModalOrder.id}/cancel`, {
-        reason: cancelReason.trim()
-      });
-
-      showFeedback('success', `Order ${shortId(cancelModalOrder.id)} cancelled successfully. Inventory released.`);
-      setCancelModalOrder(null);
-      setCancelReason('');
-      if (selectedOrder?.id === cancelModalOrder.id) {
-        setSelectedOrder(prev => prev ? { ...prev, status: 'Cancelled' } : null);
-      }
-      // Refresh pipeline
-      await fetchOrdersAndSummary(true);
-    } catch (err) {
-      showFeedback('error', err.message || 'Failed to cancel order.');
-    } finally {
-      setCancelling(false);
     }
   };
 
@@ -371,8 +471,8 @@ export const ManageOrders = () => {
 
   // ── KPI Summary Cards ─────────────────────────────────────────────────────
   const confirmedOrders = orders.filter(o => o.status === 'Confirmed');
-  const pendingOrders = orders.filter(o => o.status === 'PendingReservation');
-  const cancelledOrders = orders.filter(o => o.status === 'Cancelled' || o.status === 'CancellationPending');
+  const pendingOrders = orders.filter(o => o.status === 'Pending');
+  const cancelledOrders = orders.filter(o => o.status === 'Cancelled');
 
   const recognizedSalesTotal = salesReport?.recognizedSales !== undefined
     ? Number(salesReport.recognizedSales)
@@ -412,9 +512,9 @@ export const ManageOrders = () => {
       icon: <XCircle size={22} />
     },
     {
-      label: 'TAX & FEES COLLECTED',
-      value: salesReport ? fmtMoney(Number(salesReport.tax || 0) + Number(salesReport.deliveryFee || 0)) : 'Rs. 0.00',
-      sub: 'Fulfillment & duties',
+      label: 'DELIVERY FEES COLLECTED',
+      value: salesReport ? fmtMoney(Number(salesReport.deliveryFee || 0)) : 'Rs. 0.00',
+      sub: 'Shipping & logistics',
       bg: '#f3e8ff',
       color: '#7c3aed',
       icon: <BarChart2 size={22} />
@@ -574,7 +674,7 @@ export const ManageOrders = () => {
             {/* Status Quick Filters */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <Filter size={14} style={{ color: '#9ca3af', marginRight: 4 }} />
-              {['All', 'Confirmed', 'PendingReservation', 'CancellationPending', 'Cancelled', 'Rejected'].map((status) => {
+              {['All', 'Pending', 'Confirmed', 'Delivery', 'Delivered', 'Cancelled', 'Rejected'].map((status) => {
                 const isSelected = statusFilter === status;
                 return (
                   <button
@@ -590,7 +690,7 @@ export const ManageOrders = () => {
                       transition: 'all 0.15s'
                     }}
                   >
-                    {status === 'PendingReservation' ? 'Pending' : status === 'CancellationPending' ? 'Cancelling' : status}
+                    {status}
                   </button>
                 );
               })}
@@ -622,6 +722,9 @@ export const ManageOrders = () => {
                     <th style={thStyle} onClick={() => toggleSort('total')}>
                       Total Amount <SortIcon k="total" />
                     </th>
+                    <th style={thStyle} onClick={() => toggleSort('paymentStatus')}>
+                      Payment <SortIcon k="paymentStatus" />
+                    </th>
                     <th style={thStyle} onClick={() => toggleSort('status')}>
                       Fulfillment Status <SortIcon k="status" />
                     </th>
@@ -633,7 +736,7 @@ export const ManageOrders = () => {
                 <tbody>
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
+                      <td colSpan={7} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                           <div style={{ background: '#f3f4f6', borderRadius: '50%', padding: 18, color: '#9ca3af' }}>
                             <ShoppingBag size={36} />
@@ -665,7 +768,7 @@ export const ManageOrders = () => {
                   ) : (
                     filteredOrders.map((o) => {
                       const badge = getStatusBadge(o.status);
-                      const isConfirmed = o.status === 'Confirmed';
+                      const isPending = o.status === 'Pending';
                       return (
                         <tr key={o.id} style={{ transition: 'background-color 0.15s' }}>
                           <td style={tdStyle}>
@@ -707,6 +810,31 @@ export const ManageOrders = () => {
                             </strong>
                           </td>
                           <td style={tdStyle}>
+                            {o.paymentMethod === 'BankTransfer' ? (
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 5,
+                                padding: '3px 8px', borderRadius: 14, fontSize: '0.75rem',
+                                fontWeight: 700,
+                                background: o.paymentStatus === 'Verified' ? '#dcfce7' : o.paymentStatus === 'Rejected' ? '#fee2e2' : '#fef3c7',
+                                color: o.paymentStatus === 'Verified' ? '#15803d' : o.paymentStatus === 'Rejected' ? '#b91c1c' : '#b45309',
+                                border: `1px solid ${o.paymentStatus === 'Verified' ? '#bbf7d0' : o.paymentStatus === 'Rejected' ? '#fecaca' : '#fde68a'}`
+                              }}>
+                                <Building2 size={11} />
+                                {o.paymentStatus === 'Verified' ? 'Bank · Verified' : o.paymentStatus === 'Rejected' ? 'Bank · Rejected' : 'Bank · Pending'}
+                              </span>
+                            ) : (
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 5,
+                                padding: '3px 8px', borderRadius: 14, fontSize: '0.75rem',
+                                fontWeight: 600, background: '#f3f4f6', color: '#4b5563',
+                                border: '1px solid #e5e7eb'
+                              }}>
+                                <Banknote size={11} />
+                                COD
+                              </span>
+                            )}
+                          </td>
+                          <td style={tdStyle}>
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', gap: 6,
                               padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem',
@@ -739,51 +867,36 @@ export const ManageOrders = () => {
                                 Details
                               </button>
 
-                              {/* Cancel button */}
-                              {isConfirmed ? (
-                                <button
-                                  onClick={() => { setCancelModalOrder(o); setCancelReason(''); }}
-                                  title="Cancel order and release reserved stock"
-                                  style={{
-                                    ...btnPrimary,
-                                    background: '#fee2e2',
-                                    color: '#b91c1c',
-                                    border: '1px solid #fecaca',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 5,
-                                    padding: '6px 11px',
-                                    fontSize: '0.78rem'
-                                  }}
-                                >
-                                  <Ban size={13} />
-                                  Cancel
-                                </button>
+                              {/* Pending orders have the same operational actions for Admin and Staff. */}
+                              {isPending ? (
+                                <>
+                                  <button
+                                    onClick={() => setConfirmModalOrder(o)}
+                                    disabled={actionLoading || (o.paymentMethod === 'BankTransfer' && o.paymentStatus !== 'Verified')}
+                                    title={o.paymentMethod === 'BankTransfer' && o.paymentStatus !== 'Verified' ? 'Verify bank-transfer payment before confirmation' : 'Confirm pending order'}
+                                    style={{ ...btnPrimary, background: '#15803d', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 11px', fontSize: '0.78rem', opacity: actionLoading || (o.paymentMethod === 'BankTransfer' && o.paymentStatus !== 'Verified') ? 0.65 : 1 }}
+                                  >
+                                    <CheckCircle size={13} /> Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => { setRejectModalOrder(o); setRejectReason(''); }}
+                                    disabled={actionLoading}
+                                    title="Reject pending order"
+                                    style={{ ...btnPrimary, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 11px', fontSize: '0.78rem', opacity: actionLoading ? 0.65 : 1 }}
+                                  >
+                                    <XCircle size={13} /> Reject
+                                  </button>
+                                </>
                               ) : (
-                                <button
-                                  disabled
-                                  title={
-                                    o.status === 'Cancelled'
-                                      ? 'Order is already cancelled'
-                                      : 'Only Confirmed orders can be cancelled by Operations Admin'
-                                  }
-                                  style={{
-                                    ...btnPrimary,
-                                    background: '#f9fafb',
-                                    color: '#9ca3af',
-                                    border: '1px solid #e5e7eb',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 5,
-                                    padding: '6px 11px',
-                                    fontSize: '0.78rem',
-                                    cursor: 'not-allowed',
-                                    opacity: 0.65
-                                  }}
-                                >
-                                  <Ban size={13} />
-                                  Cancel
-                                </button>
+                                o.status === 'Confirmed' && !o.assignedRiderId ? (
+                                  <button
+                                    onClick={() => openOrder(o)}
+                                    title="Assign an available rider"
+                                    style={{ ...btnPrimary, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 11px', fontSize: '0.78rem' }}
+                                  >
+                                    <Truck size={13} /> Assign Rider
+                                  </button>
+                                ) : <span style={{ color: '#6b7280', fontSize: '0.78rem' }}>No pending actions</span>
                               )}
                             </div>
                           </td>
@@ -850,9 +963,10 @@ export const ManageOrders = () => {
                     }}
                   >
                     <option value="">All Statuses</option>
+                    <option value="Pending">Pending</option>
                     <option value="Confirmed">Confirmed</option>
-                    <option value="PendingReservation">Pending Reservation</option>
-                    <option value="CancellationPending">Cancellation Pending</option>
+                    <option value="Delivery">Delivery</option>
+                    <option value="Delivered">Delivered</option>
                     <option value="Cancelled">Cancelled</option>
                     <option value="Rejected">Rejected</option>
                   </select>
@@ -925,13 +1039,6 @@ export const ManageOrders = () => {
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>From confirmed orders</div>
               </div>
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 18 }}>
-                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#6b7280' }}>SALES TAX</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#374151', marginTop: 4 }}>
-                  {fmtMoney(salesReport.tax)}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>Collected sales taxes</div>
-              </div>
-              <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 18 }}>
                 <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#6b7280' }}>DELIVERY FEES</div>
                 <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#374151', marginTop: 4 }}>
                   {fmtMoney(salesReport.deliveryFee)}
@@ -961,7 +1068,6 @@ export const ManageOrders = () => {
                     <th style={thStyle}>Date & Time</th>
                     <th style={thStyle}>Status</th>
                     <th style={thStyle}>Subtotal</th>
-                    <th style={thStyle}>Tax</th>
                     <th style={thStyle}>Delivery Fee</th>
                     <th style={thStyle}>Total Amount</th>
                     <th style={thStyle}>Currency</th>
@@ -970,7 +1076,7 @@ export const ManageOrders = () => {
                 <tbody>
                   {(!salesReport?.orders || salesReport.orders.length === 0) ? (
                     <tr>
-                      <td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
+                      <td colSpan={7} style={{ padding: 48, textAlign: 'center', color: '#6b7280' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                           <BarChart2 size={36} color="#9ca3af" />
                           <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#374151', margin: 0 }}>
@@ -1017,7 +1123,6 @@ export const ManageOrders = () => {
                             </span>
                           </td>
                           <td style={tdStyle}>{fmtMoney(row.subtotal)}</td>
-                          <td style={tdStyle}>{fmtMoney(row.tax)}</td>
                           <td style={tdStyle}>{fmtMoney(row.deliveryFee)}</td>
                           <td style={tdStyle}>
                             <strong style={{ color: 'var(--color-primary-dark, #19372c)' }}>
@@ -1121,9 +1226,199 @@ export const ManageOrders = () => {
               </div>
             </div>
 
+            {(() => {
+              const address = selectedOrder.address || selectedOrder.Address || {};
+              const customerName = address.recipientName || address.RecipientName || '—';
+              const phone = address.phone || address.Phone || '—';
+              const addressText = [address.line1 || address.Line1, address.line2 || address.Line2, address.city || address.City, address.zone || address.Zone].filter(Boolean).join(', ');
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+                  <div style={{ background: '#f0fdf4', padding: '12px 14px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', display: 'block' }}>CUSTOMER DETAILS</span>
+                    <strong style={{ display: 'block', marginTop: 5, color: '#111827' }}>{customerName}</strong>
+                    <span style={{ display: 'block', marginTop: 3, color: '#475569', fontSize: '0.86rem' }}>Phone: {phone}</span>
+                  </div>
+                  <div style={{ background: '#eff6ff', padding: '12px 14px', borderRadius: 8, border: '1px solid #bfdbfe' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1d4ed8', display: 'block' }}>DELIVERY ADDRESS</span>
+                    <span style={{ display: 'block', marginTop: 5, color: '#111827', fontSize: '0.86rem', lineHeight: 1.45 }}>{addressText || 'Address unavailable'}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Payment Information Card */}
+            <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {selectedOrder.paymentMethod === 'BankTransfer' ? <Building2 size={14} color="#1d4ed8" /> : <Banknote size={14} color="#16a34a" />}
+                  PAYMENT INFORMATION
+                </span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '3px 10px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 700,
+                  background: selectedOrder.paymentStatus === 'Verified' ? '#dcfce7' : selectedOrder.paymentStatus === 'Rejected' ? '#fee2e2' : selectedOrder.paymentMethod === 'BankTransfer' ? '#fef3c7' : '#f3f4f6',
+                  color: selectedOrder.paymentStatus === 'Verified' ? '#15803d' : selectedOrder.paymentStatus === 'Rejected' ? '#b91c1c' : selectedOrder.paymentMethod === 'BankTransfer' ? '#b45309' : '#4b5563',
+                  border: `1px solid ${selectedOrder.paymentStatus === 'Verified' ? '#bbf7d0' : selectedOrder.paymentStatus === 'Rejected' ? '#fecaca' : selectedOrder.paymentMethod === 'BankTransfer' ? '#fde68a' : '#e5e7eb'}`
+                }}>
+                  {selectedOrder.paymentMethod === 'BankTransfer' ? (
+                    selectedOrder.paymentStatus === 'Verified' ? 'Payment Verified' :
+                    selectedOrder.paymentStatus === 'Rejected' ? 'Payment Rejected' :
+                    'Pending Verification'
+                  ) : 'Cash on Delivery'}
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.88rem', color: '#334155' }}>
+                <div>Method: <strong>{selectedOrder.paymentMethod === 'BankTransfer' ? 'Direct Bank Transfer' : 'Cash on Delivery'}</strong></div>
+                {selectedOrder.paymentMethod === 'BankTransfer' && (
+                  <div style={{ marginTop: 8 }}>
+                    {selectedOrder.receiptFileName && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '10px 12px', borderRadius: 6, border: '1px solid #cbd5e1', marginTop: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                          <FileText size={16} color="#3b82f6" />
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {selectedOrder.receiptFileName}
+                          </span>
+                          {selectedOrder.receiptUploadedAt && (
+                            <small style={{ color: '#64748b' }}>({fmtDate(selectedOrder.receiptUploadedAt)})</small>
+                          )}
+                        </div>
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '4px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          disabled={receiptLoading}
+                          onClick={() => viewReceipt(selectedOrder.id, selectedOrder.receiptFileName)}
+                        >
+                          <Eye size={13} /> {receiptLoading ? 'Loading…' : 'View Receipt'}
+                        </button>
+                      </div>
+                    )}
+
+                    {selectedOrder.rejectionReason && selectedOrder.paymentStatus === 'Rejected' && (
+                      <div style={{ marginTop: 8, color: '#b91c1c', fontSize: '0.85rem', background: '#fee2e2', padding: '6px 10px', borderRadius: 6 }}>
+                        <strong>Rejection Reason:</strong> {selectedOrder.rejectionReason}
+                      </div>
+                    )}
+
+                    {/* Staff payment verification actions if pending */}
+                    {selectedOrder.paymentStatus === 'PendingVerification' && selectedOrder.status === 'Pending' && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 10, borderTop: '1px dashed #cbd5e1' }}>
+                        <button
+                          className="btn btn-primary"
+                          style={{ fontSize: '0.82rem', padding: '6px 12px', background: '#15803d', borderColor: '#15803d' }}
+                          disabled={actionLoading}
+                          onClick={verifyPayment}
+                        >
+                          <CheckCircle size={14} /> Verify Payment
+                        </button>
+                        <button
+                          className="btn btn-outline"
+                          style={{ fontSize: '0.82rem', padding: '6px 12px', color: '#b91c1c', borderColor: '#fca5a5' }}
+                          disabled={actionLoading}
+                          onClick={rejectPayment}
+                        >
+                          <XCircle size={14} /> Reject Payment
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {selectedOrder.items?.length > 0 && <div style={{ marginBottom: 18 }}><strong>Order items</strong>{selectedOrder.items.map((item) => <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}><span>{item.name} × {item.quantity}<small style={{ display: 'block', color: '#6b7280' }}>SKU: {item.sku} · Unit: {fmtMoney(item.unitPrice)}</small></span><strong>{fmtMoney(item.lineTotal)}</strong></div>)}</div>}
-            {selectedOrder.status === 'PendingReservation' && <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}><button className="btn btn-primary" disabled={actionLoading} onClick={approveOrder}><CheckCircle size={14} /> Approve</button><button className="btn btn-outline" disabled={actionLoading} onClick={rejectOrder} style={{ color: '#b91c1c' }}><XCircle size={14} /> Reject</button></div>}
-            {selectedOrder.status === 'Confirmed' && <div style={{ marginBottom: 16 }}><button className="btn btn-outline" onClick={loadRiders}>Load Available Riders</button>{availableRiders.length > 0 && <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>{availableRiders.map((rider) => <div key={rider.riderId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #e5e7eb', borderRadius: 8, padding: 10 }}><span><strong>{rider.fullName}</strong><small style={{ display: 'block', color: '#6b7280' }}>{rider.district || 'Any zone'} · {rider.phoneNumber || 'No phone'}</small></span><button className="btn btn-primary" disabled={assigning} onClick={() => assignRider(rider.riderId)}>Assign</button></div>)}</div>}</div>}
+
+            {selectedOrder.status === 'Pending' && (
+              <div style={{ marginBottom: 16 }}>
+                {selectedOrder.paymentMethod === 'BankTransfer' && selectedOrder.paymentStatus !== 'Verified' ? (
+                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: '0.85rem', color: '#92400e' }}>
+                    <strong>Notice:</strong> Bank Transfer orders cannot be confirmed until the payment receipt has been verified above.
+                  </div>
+                ) : null}
+                <select value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} aria-label="Reason for rejecting this order" style={{ width: '100%', maxWidth: 580, height: 48, boxSizing: 'border-box', marginBottom: 10, padding: '10px 12px', border: '1px solid #fecaca', borderRadius: 8, color: rejectReason ? '#7f1d1d' : '#6b7280', background: '#fff', font: 'inherit', fontSize: '1rem', lineHeight: 1.4 }}>
+                  <option value="">Select a reason for rejecting this order</option>
+                  <option>Customer requested prior to dispatch</option>
+                  <option>Payment authorization issue</option>
+                  <option>Warehouse stock discrepancy</option>
+                  <option>Delivery address unreachable</option>
+                </select>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="btn btn-primary"
+                    disabled={actionLoading || (selectedOrder.paymentMethod === 'BankTransfer' && selectedOrder.paymentStatus !== 'Verified')}
+                    onClick={() => setConfirmModalOrder(selectedOrder)}
+                    title={selectedOrder.paymentMethod === 'BankTransfer' && selectedOrder.paymentStatus !== 'Verified' ? 'Verify payment first' : 'Confirm Order'}
+                  >
+                    <CheckCircle size={14} /> Confirm Order
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    disabled={actionLoading || !rejectReason}
+                    onClick={() => setRejectModalOrder(selectedOrder)}
+                    style={{ color: '#b91c1c' }}
+                  >
+                    <XCircle size={14} /> Reject
+                  </button>
+                </div>
+              </div>
+            )}
+            {selectedOrder.status === 'Confirmed' && !selectedOrder.assignedRiderId && (
+              <section style={{ marginBottom: 16, padding: 16, background: '#f8fafc', border: '1px solid #dbeafe', borderRadius: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <div>
+                    <strong style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Truck size={16} /> Assign a rider</strong>
+                    <small style={{ color: '#64748b' }}>Select from riders who are currently available.</small>
+                  </div>
+                  <button className="btn btn-outline" onClick={loadRiders} disabled={ridersLoading || assigning}>
+                    <RefreshCw size={14} className={ridersLoading ? 'spin' : ''} /> Refresh
+                  </button>
+                </div>
+
+                {ridersLoading ? (
+                  <p style={{ margin: '12px 0 0', color: '#64748b' }}>Loading available riders…</p>
+                ) : availableRiders.length === 0 ? (
+                  <p style={{ margin: '12px 0 0', color: '#64748b' }}>No riders are available right now.</p>
+                ) : (
+                  <>
+                    <div role="radiogroup" aria-label="Available riders" style={{ display: 'grid', gap: 8 }}>
+                      {availableRiders.map((rider) => {
+                        const riderId = rider.riderId || rider.id;
+                        const isSelected = selectedRiderId === riderId;
+                        return (
+                          <label key={riderId} style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${isSelected ? '#15803d' : '#e5e7eb'}`, background: isSelected ? '#f0fdf4' : '#fff', borderRadius: 8, padding: 10, cursor: assigning ? 'not-allowed' : 'pointer' }}>
+                            <input type="radio" name="rider" value={riderId} checked={isSelected} disabled={assigning} onChange={() => setSelectedRiderId(riderId)} />
+                            <span>
+                              <strong>{rider.fullName || rider.displayName || 'Unnamed rider'}</strong>
+                              <small style={{ display: 'block', color: '#6b7280' }}>{rider.district || 'Any zone'} · {rider.phoneNumber || 'No phone'}{rider.vehicleType ? ` · ${rider.vehicleType}` : ''}</small>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={!selectedRiderId || assigning} onClick={assignRider}>
+                      <Truck size={15} /> {assigning ? 'Assigning…' : 'Assign Selected Rider'}
+                    </button>
+                  </>
+                )}
+              </section>
+            )}
+            {selectedOrder.status === 'Confirmed' && selectedOrder.assignedRiderId && (
+              <section style={{ marginBottom: 16, padding: 14, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10 }}>
+                <strong style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#166534' }}><Truck size={16} /> Rider assigned</strong>
+                <small style={{ display: 'block', color: '#475569', marginTop: 4 }}>The order is ready to begin delivery.</small>
+                <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={actionLoading} onClick={startDelivery}>
+                  <Truck size={15} /> {actionLoading ? 'Starting…' : 'Start Delivery'}
+                </button>
+              </section>
+            )}
+            {selectedOrder.status === 'Delivery' && (
+              <section style={{ marginBottom: 16, padding: 14, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10 }}>
+                <strong style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#1d4ed8' }}><Truck size={16} /> Delivery in progress</strong>
+                <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={actionLoading} onClick={markDelivered}>
+                  <CheckCircle size={15} /> {actionLoading ? 'Updating…' : 'Mark Delivered'}
+                </button>
+              </section>
+            )}
 
             {/* Modal Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
@@ -1136,137 +1431,28 @@ export const ManageOrders = () => {
               >
                 Close
               </button>
-              {selectedOrder.status === 'Confirmed' && (
-                <button
-                  onClick={() => {
-                    const toCancel = selectedOrder;
-                    setSelectedOrder(null);
-                    setCancelModalOrder(toCancel);
-                    setCancelReason('');
-                  }}
-                  style={{
-                    ...btnPrimary, background: '#fee2e2', color: '#b91c1c',
-                    border: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: 6
-                  }}
-                >
-                  <Ban size={14} />
-                  Cancel Order
-                </button>
-              )}
             </div>
           </div>
         </Modal>
       )}
 
-      {/* ═════════════════ MODAL: CANCEL ORDER ═════════════════ */}
-      {cancelModalOrder && (
-        <Modal
-          title="Cancel Confirmed Order"
-          onClose={() => { setCancelModalOrder(null); setCancelReason(''); }}
-          accent="#b91c1c"
-        >
-          <div>
-            <div style={{
-              background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10,
-              padding: '14px 16px', marginBottom: 18, display: 'flex', gap: 10
-            }}>
-              <ShieldAlert size={20} color="#b91c1c" style={{ flexShrink: 0, marginTop: 2 }} />
-              <div style={{ fontSize: '0.85rem', color: '#991b1b', lineHeight: 1.45 }}>
-                <strong>Attention:</strong> Cancelling this order will trigger an automated stock release
-                in the Catalog Service and mark this order as Cancelled. This action cannot be undone.
-              </div>
-            </div>
+      {confirmModalOrder && (
+        <Modal title="Confirm Pending Order" onClose={() => setConfirmModalOrder(null)} accent="#15803d">
+          <p>Confirm {shortId(confirmModalOrder.id)}? This reserves it for fulfillment and enables rider assignment.</p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <button className="btn btn-outline" disabled={actionLoading} onClick={() => setConfirmModalOrder(null)}>Back</button>
+            <button className="btn btn-primary" disabled={actionLoading} onClick={() => confirmOrder(confirmModalOrder)}><CheckCircle size={14} /> {actionLoading ? 'Confirming…' : 'Confirm Order'}</button>
+          </div>
+        </Modal>
+      )}
 
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: 4 }}>
-                Target Order: <strong style={{ color: '#111827', fontFamily: 'monospace' }}>{cancelModalOrder.id}</strong>
-              </div>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                Total: <strong style={{ color: '#111827' }}>{fmtMoney(cancelModalOrder.total)}</strong>
-              </div>
-            </div>
-
-            {/* Quick reason chips */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
-                Common Reasons:
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {[
-                  'Customer requested prior to dispatch',
-                  'Payment authorization issue',
-                  'Warehouse stock discrepancy',
-                  'Delivery address unreachable'
-                ].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setCancelReason(preset)}
-                    style={{
-                      padding: '4px 10px', borderRadius: 14, fontSize: '0.76rem',
-                      fontWeight: 600, border: '1px solid #d1d5db',
-                      background: cancelReason === preset ? '#fee2e2' : '#f9fafb',
-                      color: cancelReason === preset ? '#991b1b' : '#4b5563',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Textarea for reason */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>
-                Cancellation Reason <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <textarea
-                id="cancel-reason-input"
-                rows={3}
-                value={cancelReason}
-                onChange={e => setCancelReason(e.target.value)}
-                placeholder="State the justification for cancelling this order…"
-                style={{
-                  width: '100%', padding: '10px 12px', border: '1.5px solid #d1d5db',
-                  borderRadius: 8, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
-            {/* Dialog buttons */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => { setCancelModalOrder(null); setCancelReason(''); }}
-                disabled={cancelling}
-                style={{
-                  ...btnPrimary, background: '#f3f4f6', color: '#374151',
-                  border: '1px solid #d1d5db'
-                }}
-              >
-                Keep Order
-              </button>
-              <button
-                id="confirm-cancel-order-btn"
-                type="button"
-                onClick={handleCancelOrder}
-                disabled={cancelling || !cancelReason.trim()}
-                style={{
-                  ...btnPrimary,
-                  background: !cancelReason.trim() ? '#9ca3af' : '#dc2626',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  cursor: !cancelReason.trim() || cancelling ? 'not-allowed' : 'pointer'
-                }}
-              >
-                <Ban size={14} />
-                {cancelling ? 'Cancelling & Releasing…' : 'Confirm Cancellation'}
-              </button>
-            </div>
+      {rejectModalOrder && (
+        <Modal title="Reject Pending Order" onClose={() => { setRejectModalOrder(null); setRejectReason(''); }} accent="#be123c">
+          <label htmlFor="reject-order-reason" style={{ display: 'block', fontWeight: 700, marginBottom: 6 }}>Rejection reason</label>
+          <textarea id="reject-order-reason" rows={3} value={rejectReason} onChange={event => setRejectReason(event.target.value)} placeholder="Explain why this order cannot be fulfilled." style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 8, border: '1px solid #fecdd3', resize: 'vertical' }} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+            <button className="btn btn-outline" disabled={actionLoading} onClick={() => { setRejectModalOrder(null); setRejectReason(''); }}>Back</button>
+            <button className="btn btn-outline" style={{ color: '#be123c' }} disabled={actionLoading || !rejectReason.trim()} onClick={() => rejectOrder(rejectModalOrder)}><XCircle size={14} /> {actionLoading ? 'Rejecting…' : 'Reject Order'}</button>
           </div>
         </Modal>
       )}
