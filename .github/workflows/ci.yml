@@ -28,7 +28,7 @@ jobs:
       - run: npm test
       - run: npm run build
         env:
-          VITE_API_BASE_URL: https://example.invalid/api
+          VITE_API_BASE_URL: https://tnt-gateway-vnet.yellowpebble-d68fafeb.eastasia.azurecontainerapps.io/api
       - name: Verify compiled deployment files
         run: node scripts/verify-static-build.mjs dist
       - uses: actions/upload-artifact@v4
@@ -51,6 +51,6 @@ jobs:
           push: false
           tags: marketflow-frontend:${{ github.sha }}
           build-args: |
-            VITE_API_BASE_URL=https://example.invalid/api
+            VITE_API_BASE_URL=https://tnt-gateway-vnet.yellowpebble-d68fafeb.eastasia.azurecontainerapps.io/api
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -4,20 +4,16 @@ import {
   X, CheckCircle, AlertOctagon, Filter, ChevronDown, ChevronUp,
   Edit3, Mail, Calendar, Hash
 } from 'lucide-react';
+import { ALL_ROLES } from '../../utils/roles';
 import axiosInstance from '../../services/axiosInstance';
 
 // ── Role metadata ─────────────────────────────────────────────────────────────
 const ROLE_META = {
-  OperationsAdmin: { label: 'Admin',          bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
+  Admin: { label: 'Admin',          bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
   Staff:          { label: 'Staff',           bg: '#ede9fe', color: '#5b21b6', border: '#ddd6fe' },
-  Dispatcher:     { label: 'Dispatcher',      bg: '#fce7f3', color: '#9d174d', border: '#fbcfe8' },
-  Courier:        { label: 'Driver',          bg: '#ffedd5', color: '#9a3412', border: '#fed7aa' },
+  Rider:          { label: 'Rider',          bg: '#ffedd5', color: '#9a3412', border: '#fed7aa' },
   Customer:       { label: 'Customer',        bg: '#dcfce7', color: '#166534', border: '#bbf7d0' },
-  // Legacy labels for backward compatibility display
-  CatalogStaff:   { label: 'Catalog Staff (Legacy)',   bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe' },
-  InventoryStaff: { label: 'Inventory Staff (Legacy)', bg: '#ede9fe', color: '#5b21b6', border: '#ddd6fe' },
 };
-const ALL_ROLES = ['OperationsAdmin', 'Staff', 'Dispatcher', 'Courier', 'Customer'];
 
 const RoleBadge = ({ role }) => {
   const m = ROLE_META[role] || { label: role, bg: '#f3f4f6', color: '#374151', border: '#e5e7eb' };
@@ -119,7 +115,7 @@ export const ManageUsers = () => {
 
     if (roleFilter !== 'ALL') {
       if (roleFilter === 'Staff') {
-        rows = rows.filter(u => (u.roles || []).some(r => r === 'Staff' || r === 'CatalogStaff' || r === 'InventoryStaff'));
+        rows = rows.filter(u => (u.roles || []).some(r => r === 'Staff'));
       } else {
         rows = rows.filter(u => (u.roles || []).includes(roleFilter));
       }
@@ -275,11 +271,11 @@ export const ManageUsers = () => {
         </div>
         {/* Admins */}
         <div className="kpi-card" style={{ borderLeft: '4px solid #d97706', cursor: 'pointer' }}
-          onClick={() => setRoleFilter('OperationsAdmin')}>
+          onClick={() => setRoleFilter('Admin')}>
           <div className="kpi-icon" style={{ background: '#fef3c7', color: '#d97706' }}><Shield size={22} /></div>
           <div>
             <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--color-muted)', fontWeight: 700 }}>Admins</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#d97706' }}>{roleGroups['OperationsAdmin'] || 0}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#d97706' }}>{roleGroups['Admin'] || 0}</div>
           </div>
         </div>
         {/* Staff */}
@@ -289,7 +285,7 @@ export const ManageUsers = () => {
           <div>
             <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--color-muted)', fontWeight: 700 }}>Staff Members</div>
             <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#4f46e5' }}>
-              {(roleGroups['Staff'] || 0) + (roleGroups['CatalogStaff'] || 0) + (roleGroups['InventoryStaff'] || 0)}
+              {roleGroups['Staff'] || 0}
             </div>
           </div>
         </div>

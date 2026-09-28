@@ -246,6 +246,7 @@ export const UserManagementTable = ({
               {isRider && <th style={thStyle} onClick={() => onSort && onSort('vehicleModel')}>Vehicle Model <SortIcon colKey="vehicleModel" /></th>}
               {isRider && <th style={thStyle} onClick={() => onSort && onSort('vehicleNumber')}>Vehicle Number <SortIcon colKey="vehicleNumber" /></th>}
               {isRider && <th style={thStyle} onClick={() => onSort && onSort('licenseNumber')}>License Number <SortIcon colKey="licenseNumber" /></th>}
+              {isRider && <th style={thStyle} onClick={() => onSort && onSort('availabilityStatus')}>Availability <SortIcon colKey="availabilityStatus" /></th>}
               {!isRider && <th style={thStyle}>Role</th>}
               {!isRider && !isCustomer && (
                 <th style={thStyle} onClick={() => onSort && onSort('assignedStore')}>
@@ -337,6 +338,27 @@ export const UserManagementTable = ({
                   {isRider && <td style={{ ...tdStyle, color: '#475569', fontSize: '0.85rem' }}>{u.vehicleModel || '—'}</td>}
                   {isRider && <td style={{ ...tdStyle, color: '#475569', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{u.vehicleNumber || '—'}</td>}
                   {isRider && <td style={{ ...tdStyle, color: '#475569', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{u.licenseNumber || '—'}</td>}
+                  {isRider && (
+                    <td style={tdStyle}>
+                      <div style={{ display: 'grid', gap: 7, minWidth: 118 }}>
+                        <AvailabilityBadge status={u.availabilityStatus || 'Available'} />
+                        <select
+                          aria-label={`Set availability for ${name}`}
+                          value={u.availabilityStatus || 'Available'}
+                          disabled={!u.active}
+                          onChange={(event) => onChangeAvailability?.(u, event.target.value)}
+                          style={{
+                            width: '100%', padding: '5px 7px', borderRadius: 6, border: '1px solid #cbd5e1',
+                            background: u.active ? '#fff' : '#f1f5f9', color: '#334155', fontSize: '0.75rem', cursor: u.active ? 'pointer' : 'not-allowed',
+                          }}
+                        >
+                          <option value="Available">Available</option>
+                          <option value="Busy">Busy</option>
+                          <option value="Offline">Offline</option>
+                        </select>
+                      </div>
+                    </td>
+                  )}
 
                   {/* Role */}
                   {!isRider && <td style={tdStyle}>

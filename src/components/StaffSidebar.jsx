@@ -1,11 +1,12 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, PackageCheck, Layers, Warehouse, ClipboardList, ArrowLeft, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, PackageCheck, Layers, Warehouse, ClipboardList, ArrowLeft, BarChart2, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const StaffSidebar = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [open, setOpen] = React.useState(false);
 
   const handleBackToShop = async () => {
     await logout();
@@ -13,7 +14,8 @@ export const StaffSidebar = () => {
   };
 
   return (
-    <aside className="sidebar-panel" style={{ background: '#1c3029' }}>
+    <aside className={`sidebar-panel ${open ? 'is-open' : ''}`} style={{ background: '#1c3029' }}>
+      <button className="sidebar-toggle" aria-label="Toggle staff navigation" onClick={() => setOpen((value) => !value)}>{open ? <X size={20} /> : <Menu size={20} />}<span>Menu</span></button>
       <div className="sidebar-brand">
         <div style={{ background: '#2563eb', width: 36, height: 36, borderRadius: 8, display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
           S
@@ -24,7 +26,7 @@ export const StaffSidebar = () => {
         </div>
       </div>
 
-      <nav className="sidebar-menu">
+      <nav className="sidebar-menu" onClick={() => setOpen(false)}>
         <NavLink to="/staff/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <LayoutDashboard size={18} /> Staff Dashboard
         </NavLink>
@@ -38,7 +40,10 @@ export const StaffSidebar = () => {
           <Warehouse size={18} /> Inventory Management
         </NavLink>
         <NavLink to="/staff/orders" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-          <ClipboardList size={18} /> Packing Queue
+          <ClipboardList size={18} /> Order Management
+        </NavLink>
+        <NavLink to="/staff/reports" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+          <BarChart2 size={18} /> Reports
         </NavLink>
 
         <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
@@ -50,4 +55,3 @@ export const StaffSidebar = () => {
     </aside>
   );
 };
-

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShoppingBag, Star, ShieldCheck } from 'lucide-react';
+import { X, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { PRODUCT_PLACEHOLDER_IMAGE } from '../models/Product';
 
@@ -9,6 +9,8 @@ export const QuickViewModal = ({ product, onClose }) => {
 
   if (!product) return null;
 
+  const stock = Math.max(0, Number(product.stockQuantity || 0));
+  const inStock = stock > 0;
   const displayImage = product.imageUrl || product.image_url || product.category?.imageUrl || product.category?.image_url || PRODUCT_PLACEHOLDER_IMAGE;
 
   return (
@@ -52,7 +54,7 @@ export const QuickViewModal = ({ product, onClose }) => {
           <X size={20} />
         </button>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'center' }}>
+        <div className="quick-view-content" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'center' }}>
           <div
             style={{
               height: 220,
@@ -79,18 +81,15 @@ export const QuickViewModal = ({ product, onClose }) => {
             <span className="product-category-tag">{product.category?.name || product.category || 'Produce'}</span>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.6rem', margin: '6px 0 10px' }}>{product.name}</h2>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, fontSize: '0.85rem', color: 'var(--color-accent-gold)' }}>
-              <Star size={14} fill="var(--color-accent-gold)" />
-              <span style={{ fontWeight: 700 }}>4.9</span>
-              <span style={{ color: 'var(--color-muted)' }}>(Verified Organic)</span>
-            </div>
-
             <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', marginBottom: 16 }}>
               {product.description || 'Farm-fresh, carefully handpicked local organic produce delivered directly to your doorstep.'}
             </p>
 
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: 20 }}>
               Rs. {Number(product.price).toFixed(2)}
+            </div>
+            <div style={{ fontSize: '0.85rem', color: inStock ? 'var(--color-muted)' : '#b91c1c', marginTop: -14, marginBottom: 16 }}>
+              {inStock ? `${stock} items available` : 'Out of Stock'}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
@@ -106,6 +105,8 @@ export const QuickViewModal = ({ product, onClose }) => {
                 <button
                   className="btn btn-ghost"
                   style={{ padding: '6px 12px' }}
+                  disabled={!inStock || quantity >= stock}
+                  title={quantity >= stock ? `Only ${stock} items are available in stock.` : 'Increase quantity'}
                   onClick={() => setQuantity((q) => q + 1)}
                 >
                   +
@@ -114,12 +115,13 @@ export const QuickViewModal = ({ product, onClose }) => {
 
               <button
                 className="btn btn-primary"
+                disabled={!inStock}
                 onClick={() => {
                   addToCart(product, quantity);
-                  onClose();
+                  if (inStock) onClose();
                 }}
               >
-                <ShoppingBag size={18} /> Add to Cart
+                <ShoppingBag size={18} /> {inStock ? 'Add to Cart' : 'Out of Stock'}
               </button>
             </div>
 

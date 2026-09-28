@@ -4,7 +4,7 @@ import {
   Filter, Plus, Minus, Edit3, TrendingDown, TrendingUp,
   Box, History, X, AlertOctagon, Layers, Download, BarChart2
 } from 'lucide-react';
-import axiosInstance from '../../services/axiosInstance';
+import axiosInstance, { apiUrl } from '../../services/axiosInstance';
 import ReplenishmentManager from '../../components/inventory/ReplenishmentManager';
 
 const fmt    = (n) => (typeof n === 'number' ? n.toLocaleString() : '—');
@@ -163,7 +163,7 @@ export const StaffInventoryManagement = () => {
   const handleExportCsv = async () => {
     try {
       const token = localStorage.getItem('marketflowToken');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/catalog/reports/inventory/export`, {
+      const res = await fetch(apiUrl('/catalog/reports/inventory/export'), {
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
         }

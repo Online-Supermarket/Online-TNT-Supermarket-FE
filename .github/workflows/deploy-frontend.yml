@@ -34,7 +34,8 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          # Public browser configuration, intentionally not a GitHub secret.
+          VITE_API_BASE_URL: https://tnt-gateway-vnet.yellowpebble-d68fafeb.eastasia.azurecontainerapps.io/api
 
       - name: Verify compiled deployment files
         run: node scripts/verify-static-build.mjs dist

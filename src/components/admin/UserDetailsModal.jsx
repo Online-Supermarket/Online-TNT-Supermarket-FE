@@ -55,7 +55,7 @@ export const UserDetailsModal = ({ user, type = 'staff', onClose, onEdit, onTogg
   };
 
   const isCustomer = type === 'customer' || (user.roles || []).includes('Customer');
-  const isRider = !isCustomer && (type === 'rider' || (user.roles || []).some(r => ['Rider', 'Courier', 'DeliveryDriver'].includes(r)));
+  const isRider = !isCustomer && (type === 'rider' || (user.roles || []).some(r => ['Rider'].includes(r)));
   const primaryRole = (user.roles && user.roles[0]) || (isCustomer ? 'Customer' : isRider ? 'Rider' : 'Staff');
   const accentColor = isCustomer ? '#059669' : isRider ? '#0284c7' : '#7c3aed';
   const accentDark = isCustomer ? '#047857' : isRider ? '#0369a1' : '#5b21b6';

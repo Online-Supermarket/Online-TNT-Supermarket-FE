@@ -1,11 +1,12 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Truck, History, UserCheck, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Truck, History, UserCheck, ArrowLeft, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const DeliverySidebar = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [open, setOpen] = React.useState(false);
 
   const handleBackToShop = async () => {
     await logout();
@@ -13,7 +14,8 @@ export const DeliverySidebar = () => {
   };
 
   return (
-    <aside className="sidebar-panel" style={{ background: '#172e27' }}>
+    <aside className={`sidebar-panel ${open ? 'is-open' : ''}`} style={{ background: '#172e27' }}>
+      <button className="sidebar-toggle" aria-label="Toggle delivery navigation" onClick={() => setOpen((value) => !value)}>{open ? <X size={20} /> : <Menu size={20} />}<span>Menu</span></button>
       <div className="sidebar-brand">
         <div style={{ background: '#d97706', width: 36, height: 36, borderRadius: 8, display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
           D
@@ -24,7 +26,7 @@ export const DeliverySidebar = () => {
         </div>
       </div>
 
-      <nav className="sidebar-menu">
+      <nav className="sidebar-menu" onClick={() => setOpen(false)}>
         <NavLink to="/delivery/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <LayoutDashboard size={18} /> Driver Dashboard
         </NavLink>
@@ -47,4 +49,3 @@ export const DeliverySidebar = () => {
     </aside>
   );
 };
-
