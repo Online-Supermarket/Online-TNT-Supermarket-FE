@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { ShoppingBag, Leaf, User, LogOut, ShieldAlert, PackageCheck, Truck, Menu, X } from 'lucide-react';
+import { ShoppingBag, Leaf, User, LogOut, ShieldAlert, PackageCheck, Truck, ClipboardList, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { roleHome } from '../utils/roles';
@@ -45,6 +45,13 @@ export const Navbar = () => {
           <NavLink to="/contact" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             Contact
           </NavLink>
+
+          {user && activeRole === 'Customer' && (
+            <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <ClipboardList size={16} style={{ display: 'inline', marginRight: 4, verticalAlign: 'text-bottom' }} />
+              My Order History
+            </NavLink>
+          )}
 
           {/* Quick jump to active role portal */}
           {activeRole === 'Admin' && (

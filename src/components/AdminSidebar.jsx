@@ -52,6 +52,9 @@ export const AdminSidebar = () => {
         <NavLink to="/admin/orders" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <ShoppingCart size={18} /> Order Management
         </NavLink>
+        <NavLink to="/admin/offers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+          <Tag size={18} /> Manage Offers
+        </NavLink>
         <NavLink to="/admin/reports" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <BarChart3 size={18} /> Reports
         </NavLink>

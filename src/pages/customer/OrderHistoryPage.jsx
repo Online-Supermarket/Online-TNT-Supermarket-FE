@@ -2,6 +2,57 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Building2, Banknote, CheckCircle, Clock, Download, FileText, Package, XCircle, AlertCircle } from 'lucide-react';
 import axiosInstance from '../../services/axiosInstance';
 
+const ORDER_PROGRESS_STEPS = ['Pending', 'Confirmed', 'Delivery', 'Delivered'];
+
+const orderStatusDetails = (status) => {
+  const details = {
+    Pending: { label: 'Pending', message: 'Your order has been received and is waiting for confirmation.', Icon: Clock },
+    Confirmed: { label: 'Confirmed', message: 'Your order has been confirmed and is being prepared.', Icon: CheckCircle },
+    Delivery: { label: 'Delivery', message: 'Your order is on the way to your delivery address.', Icon: Package },
+    Delivered: { label: 'Delivered', message: 'Your order has been delivered successfully.', Icon: CheckCircle },
+    Cancelled: { label: 'Cancelled', message: 'This order was cancelled and will not be delivered.', Icon: XCircle },
+    Rejected: { label: 'Rejected', message: 'This order could not be accepted. Please review the details below.', Icon: AlertCircle },
+  };
+
+  return details[status] || { label: status || 'Pending', message: 'We are updating your order status.', Icon: Clock };
+};
+
+const OrderStatusTracker = ({ status }) => {
+  const currentStep = ORDER_PROGRESS_STEPS.indexOf(status);
+  const isTerminal = status === 'Cancelled' || status === 'Rejected';
+  const { label, message, Icon } = orderStatusDetails(status);
+
+  if (isTerminal || currentStep === -1) {
+    return (
+      <section className={`order-status-tracker order-status-tracker--${String(status || 'pending').toLowerCase()}`} aria-label="Order fulfillment status">
+        <Icon size={22} aria-hidden="true" />
+        <div>
+          <strong>{label}</strong>
+          <p>{message}</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="order-status-tracker" aria-label={`Order fulfillment status: ${label}`}>
+      <p className="order-status-tracker__message">{message}</p>
+      <ol className="order-status-tracker__steps">
+        {ORDER_PROGRESS_STEPS.map((step, index) => {
+          const StepIcon = orderStatusDetails(step).Icon;
+          const state = index < currentStep ? 'is-complete' : index === currentStep ? 'is-current' : '';
+          return (
+            <li key={step} className={state}>
+              <span className="order-status-tracker__icon"><StepIcon size={15} aria-hidden="true" /></span>
+              <span>{orderStatusDetails(step).label}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+};
+
 export const OrderHistoryPage = () => {
   const [orders, setOrders] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -95,11 +146,10 @@ export const OrderHistoryPage = () => {
     }
   };
 
-  const badge = (status) => (
-    <span className={`status-pill status-${String(status || 'pending').toLowerCase()}`}>
-      {status}
-    </span>
-  );
+  const badge = (status) => {
+    const { label, Icon } = orderStatusDetails(status);
+    return <span className={`status-pill status-${String(status || 'pending').toLowerCase()}`}><Icon size={13} aria-hidden="true" /> {label}</span>;
+  };
 
   const paymentBadge = (method, status) => {
     if (method === 'BankTransfer') {
@@ -156,6 +206,7 @@ export const OrderHistoryPage = () => {
                   {badge(order.status)}
                   {paymentBadge(order.paymentMethod, order.paymentStatus)}
                 </div>
+                <div className="order-status-summary">{orderStatusDetails(order.status).message}</div>
                 <div style={{ color: 'var(--color-muted)', marginTop: 8, fontSize: '0.92rem' }}>
                   {new Date(order.createdAt).toLocaleString()} · {order.itemCount || 0} items
                 </div>
@@ -199,6 +250,8 @@ export const OrderHistoryPage = () => {
               <span>Status: {badge(selected.status)}</span>
               <span>Payment: {paymentBadge(selected.paymentMethod, selected.paymentStatus)}</span>
             </div>
+
+            <OrderStatusTracker status={selected.status} />
 
             {/* Bank Transfer specific status info */}
             {selected.paymentMethod === 'BankTransfer' && (
