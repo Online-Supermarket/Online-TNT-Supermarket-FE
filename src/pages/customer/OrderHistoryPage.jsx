@@ -61,6 +61,7 @@ export const OrderHistoryPage = () => {
   const [cancelling, setCancelling] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [pollingEnabled, setPollingEnabled] = useState(true);
+  const [riderDetails, setRiderDetails] = useState(null);
 
   const load = useCallback(async () => {
     setError('');
@@ -107,6 +108,16 @@ export const OrderHistoryPage = () => {
     }, 5000);
     return () => window.clearInterval(timer);
   }, [selected?.id]);
+
+  useEffect(() => {
+    if (selected?.assignedRiderId) {
+      axiosInstance.get(`/identity/riders/${selected.assignedRiderId}`)
+        .then(data => setRiderDetails(data))
+        .catch(() => setRiderDetails(null));
+    } else {
+      setRiderDetails(null);
+    }
+  }, [selected?.assignedRiderId]);
 
   const cancel = async () => {
     if (!selected) return;
@@ -281,6 +292,23 @@ export const OrderHistoryPage = () => {
                   )}
                 </div>
               </div>
+            )}
+
+            {riderDetails && (
+              <>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: 10 }}>Assigned Delivery Rider</h3>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: 12, borderRadius: 8, fontSize: '0.9rem', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#dcfce7', display: 'grid', placeItems: 'center', color: '#16a34a' }}>
+                      <CheckCircle size={20} />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '1rem', color: '#166534' }}>{riderDetails.name}</strong> <span style={{ color: '#15803d', fontWeight: 600 }}>({riderDetails.contactNumber || 'No phone number available'})</span><br />
+                      <span style={{ color: '#166534' }}>Vehicle: {riderDetails.vehicleType || 'Not Specified'} {riderDetails.vehicleNumber ? `— ${riderDetails.vehicleNumber}` : ''}</span>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
 
             <h3 style={{ fontSize: '1.1rem', marginBottom: 10 }}>Delivery Address</h3>
