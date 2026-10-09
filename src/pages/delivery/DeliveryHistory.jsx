@@ -1,7 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import axiosInstance from '../../services/axiosInstance';
+import { RefreshCw } from 'lucide-react';
 
 export const DeliveryHistory = () => {
-  const history = [];
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchHistory = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await axiosInstance.get('/order/rider/orders/assigned');
+      setHistory(Array.isArray(data) ? data.filter(d => d.status === 'Delivered') : []);
+    } catch (err) {
+      console.error('Failed to fetch delivery history', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   return (
     <div>
@@ -23,7 +42,14 @@ export const DeliveryHistory = () => {
             </tr>
           </thead>
           <tbody>
-            {history.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--color-muted)' }}>
+                  <RefreshCw size={20} className="spin" style={{ marginBottom: 8 }} />
+                  <div>Loading history...</div>
+                </td>
+              </tr>
+            ) : history.length === 0 ? (
               <tr>
                 <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--color-muted)' }}>
                   No delivery history to display.
@@ -31,10 +57,10 @@ export const DeliveryHistory = () => {
               </tr>
             ) : history.map((d) => (
               <tr key={d.id}>
-                <td><strong>#{d.id}</strong></td>
-                <td>{d.address}</td>
+                <td><strong>#{d.id.substring(0, 8).toUpperCase()}</strong></td>
+                <td>{d.addressLine || 'Address not provided'}</td>
                 <td><span className="status-pill status-delivered">Delivered</span></td>
-                <td>{d.completionTime}</td>
+                <td>{new Date(d.createdAt).toLocaleDateString()}</td>
               </tr>
             ))}
           </tbody>
