@@ -372,9 +372,8 @@ export const OffersPage = () => {
           {/* Hero stats */}
           <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
             {[
-              { icon: Tag,     val: `${activeOffers.length}`,    label: 'Active Deals' },
-              { icon: Percent, val: totalSavings > 0 ? `Rs. ${totalSavings.toFixed(0)}+` : '—', label: 'Total Savings' },
-              { icon: Clock,   val: 'Daily',                     label: 'Updated' },
+              { icon: Tag,   val: `${activeOffers.length}`, label: 'Active Deals' },
+              { icon: Clock, val: 'Daily',                  label: 'Updated' },
             ].map(({ icon: Icon, val, label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: 8 }}>

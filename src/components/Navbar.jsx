@@ -47,9 +47,9 @@ export const Navbar = () => {
           </NavLink>
 
           {user && activeRole === 'Customer' && (
-            <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ fontWeight: 600 }}>
               <ClipboardList size={16} style={{ display: 'inline', marginRight: 4, verticalAlign: 'text-bottom' }} />
-              My Order History
+              My Orders
             </NavLink>
           )}
 
