@@ -46,6 +46,12 @@ export const Navbar = () => {
             Contact
           </NavLink>
 
+          {user && activeRole === 'Customer' && (
+            <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ fontWeight: 600 }}>
+              My Orders
+            </NavLink>
+          )}
+
           {/* Quick jump to active role portal */}
           {activeRole === 'Admin' && (
             <NavLink to="/admin/dashboard" className="nav-link" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
