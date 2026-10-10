@@ -1,59 +1,76 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Download, RefreshCw, Package, ShoppingCart, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Download, RefreshCw, Banknote, Building2, Package, BarChart3 } from 'lucide-react';
 import axiosInstance from '../../services/axiosInstance';
+import { dateRange, formatMoney, isSale, paymentName, reportCsv, showTotals } from '../../utils/reporting';
+import './AdminReports.css';
 
-const money = (value, currency = 'LKR') => `${currency === 'LKR' ? 'Rs.' : currency} ${Number(value || 0).toFixed(2)}`;
-const query = (values) => {
-  const params = new URLSearchParams();
-  Object.entries(values).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== '') params.set(key, value); });
-  return params.toString();
-};
-
+const initialFilters = { from: '', to: '', status: '', paymentMethod: '', threshold: 5, stock: '' };
+const statuses = ['Pending', 'PendingReservation', 'Confirmed', 'Delivery', 'Delivered', 'Cancelled', 'Rejected'];
 export const AdminReports = () => {
-  const [sales, setSales] = useState(null); const [inventory, setInventory] = useState(null);
-  const [filters, setFilters] = useState({ from: '', to: '', status: '', threshold: 5 });
-  const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [exporting, setExporting] = useState('');
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
+  const [filters, setFilters] = useState(initialFilters);
+  const [snapshot, setSnapshot] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [refresh, setRefresh] = useState(0);
+  const [tab, setTab] = useState('sales');
+  const request = useRef(0);
+  useEffect(() => {
+    const id = ++request.current;
+    setLoading(true); setError(''); setSnapshot(null);
+    (async () => {
+      try {
+        const range = dateRange(filters.from, filters.to);
+        const params = new URLSearchParams();
+        Object.entries({ ...range, status: filters.status }).forEach(([key,value]) => { if (value) params.set(key,value); });
+        const [sales, inventory] = await Promise.all([
+          axiosInstance.get(`/order/reports/sales?${params}`),
+          axiosInstance.get(`/catalog/reports/inventory?threshold=${filters.threshold}`),
+        ]);
+        if (id === request.current) setSnapshot({ orders: sales.orders || [], products: inventory.products || [], generatedAt: new Date().toISOString() });
+      } catch (err) { if (id === request.current) setError(err.message || 'Unable to load reports. Please refresh to try again.'); }
+      finally { if (id === request.current) setLoading(false); }
+    })();
+    return () => { request.current++; };
+  }, [filters.from, filters.to, filters.status, filters.threshold, refresh]);
+  const field = (name, value) => setFilters(current => ({ ...current, [name]: value }));
+  const orders = (snapshot?.orders || []).filter(o => !filters.paymentMethod || (filters.paymentMethod === 'CashOnDelivery' ? ['CashOnDelivery','COD'].includes(o.paymentMethod) : o.paymentMethod === filters.paymentMethod));
+  const products = (snapshot?.products || []).filter(p => !filters.stock || (filters.stock === 'low' ? p.stockQuantity <= filters.threshold : filters.stock === 'out' ? p.stockQuantity <= 0 : p.stockQuantity > filters.threshold));
+  const sales = orders.filter(isSale);
+  const cash = sales.filter(o => ['CashOnDelivery','COD'].includes(o.paymentMethod));
+  const bank = sales.filter(o => o.paymentMethod === 'BankTransfer');
+  const unknown = sales.filter(o => !['CashOnDelivery','COD','BankTransfer'].includes(o.paymentMethod));
+  const stockValue = products.reduce((sum,p) => sum + Number(p.price) * Number(p.stockQuantity), 0);
+  const exportReport = kind => {
+    if (!snapshot || loading) return;
     try {
-      const from = filters.from ? `${filters.from}T00:00:00Z` : ''; const to = filters.to ? `${filters.to}T23:59:59.999Z` : '';
-      const [salesReport, inventoryReport] = await Promise.all([
-        axiosInstance.get(`/reporting/reports/sales?${query({ from, to, status: filters.status })}`),
-        axiosInstance.get(`/reporting/reports/inventory?${query({ threshold: filters.threshold })}`),
-      ]);
-      setSales(salesReport); setInventory(inventoryReport);
-    } catch (err) { setError(err.message || 'Unable to load reporting data.'); } finally { setLoading(false); }
-  }, [filters]);
-  useEffect(() => { load(); }, [load]);
-  const exportReport = async (kind) => {
-    setExporting(kind); setError('');
-    try {
-      const from = filters.from ? `${filters.from}T00:00:00Z` : ''; const to = filters.to ? `${filters.to}T23:59:59.999Z` : '';
-      const path = kind === 'sales' ? `/reporting/reports/sales/export?${query({ from, to, status: filters.status })}` : `/reporting/reports/inventory/export?${query({ threshold: filters.threshold })}`;
-      const blob = await axiosInstance.get(path, { responseType: 'blob' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
-      anchor.href = url; anchor.download = `${kind}-report.csv`; anchor.click(); URL.revokeObjectURL(url);
-    } catch (err) { setError(err.message || `Unable to export ${kind} report.`); } finally { setExporting(''); }
+      const url = URL.createObjectURL(new Blob([reportCsv(kind, orders, products, filters, snapshot.generatedAt)], { type: 'text/csv;charset=utf-8;' }));
+      const anchor = document.createElement('a'); anchor.href = url; anchor.download = `TNT-${kind}-report-${snapshot.generatedAt.slice(0,10)}.csv`;
+      document.body.appendChild(anchor); anchor.click(); anchor.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch { setError('Unable to download the report. Please try again.'); }
   };
-  return <div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-      <div><h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', color: 'var(--color-primary-dark)', marginBottom: 6 }}>Sales & Inventory Reports</h1><p style={{ color: 'var(--color-muted)', margin: 0 }}>Live reporting data from order and catalog events.</p></div>
-      <div style={{ display: 'flex', gap: 8 }}><button className="btn btn-outline" onClick={load} disabled={loading}><RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh</button><button className="btn btn-primary" onClick={() => exportReport('sales')} disabled={!!exporting}><Download size={16} /> {exporting === 'sales' ? 'Exporting…' : 'Sales CSV'}</button><button className="btn btn-outline" onClick={() => exportReport('inventory')} disabled={!!exporting}><Download size={16} /> {exporting === 'inventory' ? 'Exporting…' : 'Inventory CSV'}</button></div>
-    </div>
-    {error && <div role="alert" style={{ marginBottom: 18, padding: 12, borderRadius: 8, background: '#fee2e2', color: '#991b1b' }}>{error}</div>}
-    <section style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'end', padding: 16, marginBottom: 20, background: '#fff', border: '1px solid var(--color-border)', borderRadius: 8 }}>
-      <label>From<input type="date" value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} /></label><label>To<input type="date" value={filters.to} onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} /></label><label>Status<select value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}><option value="">All statuses</option><option value="Confirmed">Confirmed</option><option value="PendingReservation">Pending reservation</option><option value="Cancelled">Cancelled</option><option value="Rejected">Rejected</option></select></label><label>Low-stock threshold<input type="number" min="0" max="999999" value={filters.threshold} onChange={e => setFilters(f => ({ ...f, threshold: Math.max(0, Number(e.target.value) || 0) }))} /></label>
+  const date = value => new Date(value).toLocaleString('en-GB', { timeZone: 'Asia/Colombo' });
+  return <div className="tnt-reports">
+    <header className="tnt-reports-heading"><div><span className="tnt-reports-kicker">TNT BUSINESS OVERVIEW</span><h1>Sales & Stock Reports</h1><p>Cash sales, bank transfers and stock — together in one place.</p></div><div className="tnt-reports-actions"><button className="btn btn-outline" disabled={loading} onClick={() => setRefresh(n => n + 1)}><RefreshCw size={16} /> Refresh</button><button className="btn btn-primary" disabled={loading || !snapshot} onClick={() => exportReport('complete')}><Download size={17} /> Download Full Report</button></div></header>
+    <section className="tnt-report-filters" aria-label="Report filters">
+      <label>From date<input type="date" value={filters.from} onChange={e => field('from', e.target.value)} /></label>
+      <label>To date<input type="date" value={filters.to} min={filters.from || undefined} onChange={e => field('to', e.target.value)} /></label>
+      <label>Order status<select value={filters.status} onChange={e => field('status',e.target.value)}><option value="">All statuses</option>{statuses.map(s => <option key={s}>{s}</option>)}</select></label>
+      <label>Payment method<select value={filters.paymentMethod} onChange={e => field('paymentMethod',e.target.value)}><option value="">All methods</option><option value="CashOnDelivery">Cash on delivery</option><option value="BankTransfer">Bank transfer</option></select></label>
+      <label>Stock status<select value={filters.stock} onChange={e => field('stock',e.target.value)}><option value="">All products</option><option value="low">Low stock (includes zero)</option><option value="out">Out of stock</option><option value="healthy">Above threshold</option></select></label>
+      <label>Low-stock threshold<input type="number" min="0" max="999999" step="1" value={filters.threshold} onChange={e => field('threshold',Math.min(999999,Math.max(0,Math.floor(Number(e.target.value) || 0))))} /></label>
+      <button className="btn btn-ghost" onClick={() => setFilters(initialFilters)}>Reset filters</button>
     </section>
-    <div className="kpi-grid" style={{ marginBottom: 24 }}>
-      <div className="kpi-card"><div className="kpi-icon" style={{ background: '#dcfce7', color: '#166534' }}><BarChart3 size={22} /></div><div><div className="kpi-label">RECOGNIZED SALES</div><div className="kpi-val">{loading ? '…' : money(sales?.recognizedSales, sales?.orders?.[0]?.currency)}</div><div className="kpi-sub">Confirmed orders only</div></div></div>
-      <div className="kpi-card"><div className="kpi-icon" style={{ background: '#dbeafe', color: '#1d4ed8' }}><ShoppingCart size={22} /></div><div><div className="kpi-label">ORDERS</div><div className="kpi-val">{loading ? '…' : sales?.orderCount ?? 0}</div><div className="kpi-sub">Orders in selected range</div></div></div>
-      <div className="kpi-card"><div className="kpi-icon" style={{ background: '#fef3c7', color: '#92400e' }}><Package size={22} /></div><div><div className="kpi-label">PRODUCTS</div><div className="kpi-val">{loading ? '…' : inventory?.totalProducts ?? 0}</div><div className="kpi-sub">Active catalog products</div></div></div>
-      <div className="kpi-card"><div className="kpi-icon" style={{ background: '#fee2e2', color: '#b91c1c' }}><AlertTriangle size={22} /></div><div><div className="kpi-label">LOW STOCK</div><div className="kpi-val">{loading ? '…' : inventory?.lowStockCount ?? 0}</div><div className="kpi-sub">At or below threshold</div></div></div>
+    {error && <p role="alert" className="tnt-report-error">{error}</p>}
+    <div className="tnt-report-cards" aria-busy={loading}>
+      {[['Total sales', showTotals(sales), `${sales.length} confirmed / delivery / delivered orders`, BarChart3], ['Cash sales', showTotals(cash), `${cash.length} cash-on-delivery orders`, Banknote], ['Bank sales', showTotals(bank), `${bank.length} bank-transfer orders`, Building2], ['Stock retail value', formatMoney(stockValue), `${products.length} products · ${products.reduce((n,p) => n + Number(p.stockQuantity),0)} units`, Package]].map(([title,value,note,Icon]) => <section className="tnt-report-card" key={title}><Icon size={22} /><span>{title}</span><strong>{loading ? '…' : snapshot ? value : '—'}</strong><small>{note}</small></section>)}
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20 }}>
-      <section style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: 8, padding: 20, overflowX: 'auto' }}><h2 style={{ marginTop: 0 }}>Sales</h2><table className="data-table"><thead><tr><th>Order</th><th>Date</th><th>Status</th><th>Total</th></tr></thead><tbody>{(sales?.orders || []).map(order => <tr key={order.id}><td>{String(order.id).slice(0, 8)}…</td><td>{new Date(order.createdAt).toLocaleDateString()}</td><td>{order.status}</td><td>{money(order.total, order.currency)}</td></tr>)}{!loading && !sales?.orders?.length && <tr><td colSpan="4">No orders found.</td></tr>}</tbody></table></section>
-      <section style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: 8, padding: 20, overflowX: 'auto' }}><h2 style={{ marginTop: 0 }}>Inventory</h2><table className="data-table"><thead><tr><th>SKU</th><th>Product</th><th>Stock</th><th>Price</th></tr></thead><tbody>{(inventory?.products || []).map(product => <tr key={product.sku}><td>{product.sku}</td><td>{product.name}</td><td style={{ color: product.lowStock ? '#b91c1c' : undefined }}>{product.stockQuantity}</td><td>{money(product.price)}</td></tr>)}{!loading && !inventory?.products?.length && <tr><td colSpan="4">No products found.</td></tr>}</tbody></table></section>
-    </div>
+    <p className="tnt-report-note">Sales include confirmed, out-for-delivery and delivered orders, including delivery fees and tax. These are order values, not a cash collection statement. Pending, cancelled and rejected orders are excluded from sales totals. Currencies are shown separately.</p>
+    {unknown.length > 0 && <p className="tnt-report-note">{unknown.length} sales orders have an unspecified payment method ({showTotals(unknown)}); these are included only in total sales.</p>}
+    <section className="tnt-report-panel">
+      <div className="tnt-report-panel-heading"><div className="tnt-report-tabs" role="group" aria-label="Report section"><button aria-pressed={tab === 'sales'} onClick={() => setTab('sales')}>Sales & payments <span>{orders.length}</span></button><button aria-pressed={tab === 'stock'} onClick={() => setTab('stock')}>Stock report <span>{products.length}</span></button></div><button className="btn btn-outline" disabled={loading || !snapshot} onClick={() => exportReport(tab === 'sales' ? 'sales' : 'inventory')}><Download size={15} /> {tab === 'sales' ? 'Sales CSV' : 'Stock CSV'}</button></div>
+      {tab === 'sales' ? <><p className="tnt-report-note">Orders placed within the selected dates (Sri Lanka time). Payment status is shown separately from fulfillment status.</p><div className="tnt-report-table"><table className="data-table"><thead><tr>{['Order','Placed on','Status','Payment method','Payment status','Total'].map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{!loading && snapshot && orders.map(o => <tr key={o.id}><td title={o.id}>{String(o.id).slice(0,8)}…</td><td>{date(o.createdAt)}</td><td>{o.status}</td><td>{paymentName(o.paymentMethod)}</td><td>{o.paymentStatus === 'NotRequired' ? 'Cash on delivery' : o.paymentStatus || 'Unknown'}</td><td>{formatMoney(o.total,o.currency)}</td></tr>)}{(loading || !orders.length) && <tr><td colSpan="6">{loading ? 'Loading sales…' : snapshot ? 'No orders match these filters.' : 'Report unavailable. Please refresh.'}</td></tr>}</tbody></table></div></> : <><p className="tnt-report-note">Current active inventory; date and payment filters do not apply to stock. Values use retail prices, not purchase costs. {products.filter(p => p.stockQuantity <= filters.threshold).length} low-stock products · {products.filter(p => p.stockQuantity <= 0).length} out of stock.</p><div className="tnt-report-table"><table className="data-table"><thead><tr>{['SKU','Product','Category','Stock','Retail price','Retail value','Stock status'].map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{!loading && snapshot && products.map(p => <tr key={p.sku}><td>{p.sku}</td><td>{p.name}</td><td>{p.categoryName}</td><td><strong>{p.stockQuantity}</strong></td><td>{formatMoney(p.price)}</td><td>{formatMoney(p.price * p.stockQuantity)}</td><td><span className={`tnt-stock-badge ${p.stockQuantity <= filters.threshold ? 'is-low' : ''}`}>{p.stockQuantity <= 0 ? 'Out of stock' : p.stockQuantity <= filters.threshold ? 'Low stock' : 'In stock'}</span></td></tr>)}{(loading || !products.length) && <tr><td colSpan="7">{loading ? 'Loading stock…' : snapshot ? 'No products match these filters.' : 'Report unavailable. Please refresh.'}</td></tr>}</tbody></table></div></>}
+    </section>
+    {snapshot && <p className="tnt-report-note">Updated {date(snapshot.generatedAt)} · Full Report downloads one CSV containing the sales summary, order details and current stock details for the selected filters.</p>}
   </div>;
 };
-
 export default AdminReports;

@@ -1,6 +1,7 @@
+import MobileNumberInput from '../MobileNumberInput';
+import { normalizeMobileNumber, isMobileNumber, MOBILE_NUMBER_ERROR } from '../../utils/mobileNumber';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Shield, Lock, Mail, Phone, User, CheckCircle2, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { isSriLankanPhone, normalizeSriLankanPhone } from '../../utils/identityValidation';
 
 /* ── helpers ── */
 const pwStrength = (p) => {
@@ -15,9 +16,9 @@ const pwStrength = (p) => {
 const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 const strengthColor = ['', '#ef4444', '#f59e0b', '#22c55e', '#0ea5e9'];
 
-const InputField = ({ label, required, icon: Icon, error, hint, children }) => (
+const InputField = ({ label, required, icon: Icon, error, hint, children, htmlFor }) => (
   <div>
-    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+    <label htmlFor={htmlFor} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
       {label} {required && <span style={{ color: '#ef4444', lineHeight: 1 }}>*</span>}
     </label>
     <div style={{ position: 'relative' }}>
@@ -54,7 +55,7 @@ const selectStyle = (hasError, hasIcon = false) => ({
 export const StaffFormModal = ({ isOpen, mode = 'create', staff = null, onClose, onSave }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('07');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState('Active');
@@ -73,12 +74,12 @@ export const StaffFormModal = ({ isOpen, mode = 'create', staff = null, onClose,
     if (staff && mode === 'edit') {
       setFullName(staff.fullName || staff.displayName || '');
       setEmail(staff.email || '');
-      setPhoneNumber(staff.contactNumber || '');
+      setPhoneNumber(normalizeMobileNumber(staff.contactNumber) || '07');
       setStatus(staff.active === false ? 'Inactive' : 'Active');
       setPassword('');
       setConfirmPassword('');
     } else {
-      setFullName(''); setEmail(''); setPhoneNumber('');
+      setFullName(''); setEmail(''); setPhoneNumber('07');
       setPassword(''); setConfirmPassword('');
       setStatus('Active');
     }
@@ -94,7 +95,7 @@ export const StaffFormModal = ({ isOpen, mode = 'create', staff = null, onClose,
     if (!fullName.trim()) errs.fullName = 'Full name is required.';
     if (!email.trim()) errs.email = 'Email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Enter a valid email address.';
-    if (!phoneNumber.trim() || !isSriLankanPhone(phoneNumber)) errs.phoneNumber = 'Please enter a valid Sri Lankan phone number.';
+    if (!isMobileNumber(phoneNumber)) errs.phoneNumber = MOBILE_NUMBER_ERROR;
     if (mode === 'create') {
       if (!password) errs.password = 'Password is required.';
       else if (password.length < 8) errs.password = 'Min 8 characters.';
@@ -110,7 +111,7 @@ export const StaffFormModal = ({ isOpen, mode = 'create', staff = null, onClose,
     if (!validate()) return;
     setSubmitting(true);
     try {
-      await onSave({ fullName: fullName.trim(), email: email.trim(), phoneNumber: normalizeSriLankanPhone(phoneNumber), status, role: 'Staff', ...(mode === 'create' ? { password } : {}) });
+      await onSave({ fullName: fullName.trim(), email: email.trim(), phoneNumber: normalizeMobileNumber(phoneNumber), status, role: 'Staff', ...(mode === 'create' ? { password } : {}) });
     } catch (err) {
       setErrors(p => ({ ...p, api: err?.message || 'Operation failed. Please try again.' }));
     } finally { setSubmitting(false); }
@@ -183,15 +184,9 @@ export const StaffFormModal = ({ isOpen, mode = 'create', staff = null, onClose,
                     style={inputStyle(touched.email && errors.email)}
                   />
                 </InputField>
-                <InputField label="Phone Number" required icon={Phone} error={touched.phoneNumber && errors.phoneNumber}>
-                  <input
-                    type="tel"
-                    placeholder="+94 77 123 4567"
-                    value={phoneNumber}
-                    onChange={e => setPhoneNumber(e.target.value)}
-                    onBlur={() => touch('phoneNumber')}
-                    style={inputStyle(touched.phoneNumber && errors.phoneNumber)}
-                  />
+                <InputField htmlFor="staff-phone-number" label="Phone Number" required error={touched.phoneNumber && errors.phoneNumber}>
+                  <MobileNumberInput id="staff-phone-number" value={phoneNumber} onChange={setPhoneNumber}
+                    onBlur={() => touch('phoneNumber')} invalid={Boolean(touched.phoneNumber && errors.phoneNumber)} />
                 </InputField>
               </div>
             </div>

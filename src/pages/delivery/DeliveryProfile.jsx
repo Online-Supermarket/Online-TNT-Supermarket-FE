@@ -1,3 +1,5 @@
+import MobileNumberInput from '../../components/MobileNumberInput';
+import { normalizeMobileNumber, isMobileNumber, MOBILE_NUMBER_ERROR } from '../../utils/mobileNumber';
 import React, { useState, useEffect } from 'react';
 import { Truck, ShieldCheck, User, RefreshCw, Edit2, Save, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +11,7 @@ export const DeliveryProfile = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
+  const [phoneError, setPhoneError] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -17,7 +20,7 @@ export const DeliveryProfile = () => {
         const data = await axiosInstance.get('/identity/users/me');
         setProfile(data);
         setFormData({
-          contactNumber: data.contactNumber || '',
+          contactNumber: normalizeMobileNumber(data.contactNumber) || '07',
           address: data.address || '',
           district: data.district || '',
           vehicleType: data.vehicleType || '',
@@ -34,6 +37,8 @@ export const DeliveryProfile = () => {
   }, []);
 
   const handleSave = async () => {
+    if (!isMobileNumber(formData.contactNumber)) { setPhoneError(MOBILE_NUMBER_ERROR); return; }
+    setPhoneError('');
     setSaving(true);
     try {
       await axiosInstance.put('/identity/users/me', formData);
@@ -93,9 +98,11 @@ export const DeliveryProfile = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-muted)', marginBottom: 4 }}>Contact Number</label>
+            <label htmlFor="rider-profile-phone" style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-muted)', marginBottom: 4 }}>Contact Number</label>
             {isEditing ? (
-              <input type="text" name="contactNumber" value={formData.contactNumber} onChange={handleChange} style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }} />
+              <><MobileNumberInput id="rider-profile-phone" value={formData.contactNumber}
+                onChange={value => { setFormData(current => ({ ...current, contactNumber: value })); setPhoneError(''); }}
+                invalid={Boolean(phoneError)} />{phoneError && <p role="alert" style={{ color: '#dc2626', fontSize: '.8rem' }}>{phoneError}</p>}</>
             ) : (
               <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>{profile?.contactNumber || '—'}</div>
             )}

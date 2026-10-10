@@ -1,14 +1,12 @@
+import MobileNumberInput from '../../components/MobileNumberInput';
+import { isMobileNumber, MOBILE_NUMBER_ERROR } from '../../utils/mobileNumber';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Leaf, Lock, Mail, User, Phone, MapPin, CreditCard, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Leaf, Lock, Mail, User, MapPin, CreditCard, ArrowLeft, CheckCircle } from 'lucide-react';
 
-const SL_DISTRICTS = [
-  'Ampara','Anuradhapura','Badulla','Batticaloa','Colombo','Galle','Gampaha',
-  'Hambantota','Jaffna','Kalutara','Kandy','Kegalle','Kilinochchi','Kurunegala',
-  'Mannar','Matale','Matara','Monaragala','Mullaitivu','Nuwara Eliya',
-  'Polonnaruwa','Puttalam','Ratnapura','Trincomalee','Vavuniya',
-];
+import { SL_DISTRICTS } from '../../utils/districts';
+
 
 const field = (label, id, input, error) => (
   <div>
@@ -25,7 +23,7 @@ export const RegisterPage = () => {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    fullName: '', email: '', idNumber: '', contactNumber: '',
+    fullName: '', email: '', idNumber: '', contactNumber: '07',
     district: '', address: '', password: '', confirmPassword: '',
   });
   const [errors, setErrors]   = useState({});
@@ -43,8 +41,8 @@ export const RegisterPage = () => {
                                           e.email         = 'A valid email address is required.';
     if (!form.idNumber.trim())            e.idNumber      = 'NIC / ID number is required.';
     if (!form.contactNumber.trim())       e.contactNumber = 'Contact number is required.';
-    else if (!/^0[0-9]{9}$/.test(form.contactNumber.trim()))
-                                          e.contactNumber = 'Enter a valid Sri Lankan number (e.g. 07XXXXXXXX).';
+    else if (!isMobileNumber(form.contactNumber))
+                                          e.contactNumber = MOBILE_NUMBER_ERROR;
     if (!form.district)                   e.district      = 'Please select a district.';
     if (!form.address.trim())             e.address       = 'Address is required.';
     if (!form.password)                   e.password      = 'Password is required.';
@@ -192,11 +190,9 @@ export const RegisterPage = () => {
                 </div>, errors.idNumber
               )}
               {field('Contact Number *', 'contactNumber',
-                <div style={{ position: 'relative' }}>
-                  <Phone size={16} style={iconStyle} />
-                  <input id="contactNumber" type="tel" value={form.contactNumber} onChange={set('contactNumber')}
-                    placeholder="07XXXXXXXX" autoComplete="tel" maxLength={10} style={inputStyle(errors.contactNumber)} />
-                </div>, errors.contactNumber
+                <MobileNumberInput id="contactNumber" value={form.contactNumber}
+                  onChange={value => setForm(current => ({ ...current, contactNumber: value }))}
+                  invalid={Boolean(errors.contactNumber)} />, errors.contactNumber
               )}
             </div>
 

@@ -1,14 +1,18 @@
+import { downloadInvoicePdf } from '../../components/invoice/downloadInvoice';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Banknote, Building2, CheckCircle, Download, Eye, FileCheck, FileText, Trash2, Truck, Upload, X } from 'lucide-react';
+import { Banknote, Building2, CheckCircle, Download, Eye, FileCheck, Trash2, Truck, Upload, X } from 'lucide-react';
+import MobileNumberInput from '../../components/MobileNumberInput';
+import { SL_DISTRICTS } from '../../utils/districts';
+import InvoiceModal from '../../components/invoice/InvoiceModal';
+import { paymentLabel } from '../../components/invoice/invoicePdf';
 import { useCart } from '../../context/CartContext';
 import axiosInstance, { apiUrl } from '../../services/axiosInstance';
 
-const emptyAddress = { fullName: '', fullAddress: '', district: '', contactNumber: '' };
+const emptyAddress = { fullName: '', fullAddress: '', district: '', contactNumber: '07' };
 const newKey = () => globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}`;
 const fieldStyle = { display: 'grid', gap: 6, fontWeight: 700, fontSize: '.9rem' };
 const inputStyle = { padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: 6, font: 'inherit' };
-const paymentLabel = (method) => method === 'BankTransfer' ? 'Bank Transfer' : 'Cash on Delivery';
 
 // JSON receipt fallback avoids gateways that reject otherwise valid multipart boundaries.
 // The Order Service validates the decoded PDF exactly as it validates multipart uploads.
@@ -35,42 +39,6 @@ const postReceiptOrder = async (addressId, receiptFile, idempotencyKey) => {
     throw error;
   }
   return payload;
-};
-
-const pdfSafe = (value) => String(value ?? '').replace(/[^\x20-\x7E]/g, '?').replace(/[\\()]/g, '\\$&');
-const createInvoicePdf = (invoice, paymentMethod) => {
-  const money = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
-  const lines = [
-    'TNT ONLINE SUPERMARKET',
-    'INVOICE',
-    `Invoice / Order: ${invoice.id}`,
-    `Date: ${new Date(invoice.createdAt).toLocaleString()}`,
-    `Order status: ${invoice.status}`,
-    `Payment method: ${paymentLabel(paymentMethod)}`,
-    ...(invoice.paymentStatus ? [`Payment status: ${invoice.paymentStatus}`] : []),
-    '',
-    'ITEMS',
-    ...(invoice.items || []).flatMap((item) => [`${item.name} x ${item.quantity}`, `  ${money(item.unitPrice)} each     ${money(item.lineTotal)}`]),
-    '',
-    `Subtotal: ${money(invoice.subtotal)}`,
-    `Delivery: ${money(invoice.deliveryFee)}`,
-    `TOTAL: ${money(invoice.total)}`,
-    '',
-    'Thank you for shopping with TNT Online Supermarket.',
-  ];
-  const stream = ['BT', '/F1 12 Tf', '50 760 Td', '16 TL', ...lines.flatMap((line, index) => [`(${pdfSafe(line)}) Tj`, index < lines.length - 1 ? 'T*' : '']), 'ET'].filter(Boolean).join('\n');
-  const objects = [
-    '<< /Type /Catalog /Pages 2 0 R >>',
-    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
-  ];
-  let pdf = '%PDF-1.4\n'; const offsets = [0];
-  objects.forEach((object, index) => { offsets.push(pdf.length); pdf += `${index + 1} 0 obj\n${object}\nendobj\n`; });
-  const xref = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return new Blob([pdf], { type: 'application/pdf' });
 };
 
 export const CheckoutPage = () => {
@@ -151,18 +119,46 @@ export const CheckoutPage = () => {
   };
 
   const saveAddress = async () => {
-    if (!newAddress.fullName.trim() || !newAddress.fullAddress.trim() || !newAddress.district.trim() || !newAddress.contactNumber.trim()) {
-      setError('Full name, full address, district, and contact number are required.');
+    setError('');
+    
+    const name = newAddress.fullName.trim();
+    const address = newAddress.fullAddress.trim();
+    const district = newAddress.district.trim();
+    const phone = newAddress.contactNumber.trim();
+
+    if (!name || !address || !district || !phone) {
+      setError('Please fill in all required fields (Name, Address, District, and Contact Number).');
+      return;
+    }
+
+    if (name.length < 3) {
+      setError('Please enter a valid full name (minimum 3 characters).');
+      return;
+    }
+
+    if (address.length < 10) {
+      setError('Please enter a complete, detailed delivery address.');
+      return;
+    }
+
+    if (!SL_DISTRICTS.includes(district)) {
+      setError('Please select a district from the list.');
+      return;
+    }
+
+    const phoneRegex = /^07[0-9]{8}$/;
+    if (!phoneRegex.test(phone)) {
+      setError('Please enter all 10 digits of your mobile number (e.g., 077-1234567).');
       return;
     }
 
     const payload = {
-      recipientName: newAddress.fullName.trim(),
-      line1: newAddress.fullAddress.trim(),
+      recipientName: name,
+      line1: address,
       line2: null,
-      city: newAddress.district.trim(),
-      zone: newAddress.district.trim(),
-      phone: newAddress.contactNumber.trim(),
+      city: district,
+      zone: district,
+      phone: phone,
     };
 
     setSaving(true);
@@ -276,16 +272,7 @@ export const CheckoutPage = () => {
 
   const downloadInvoice = () => {
     if (!invoice) return;
-    const url = URL.createObjectURL(createInvoicePdf(invoice, paymentMethod === 'BankTransfer' ? 'BankTransfer' : 'COD'));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `TNT-invoice-${invoice.id}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    window.setTimeout(() => {
-      link.remove();
-      URL.revokeObjectURL(url);
-    }, 0);
+    downloadInvoicePdf(invoice, paymentMethod);
   };
 
   if (order) return <div style={{ maxWidth: 640, margin: '60px auto', textAlign: 'center', background: '#fff', padding: '40px 32px', borderRadius: 12, border: '1px solid var(--color-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
@@ -306,16 +293,7 @@ export const CheckoutPage = () => {
       <button className="btn btn-primary" onClick={downloadInvoice}><Download size={18} /> Download PDF</button>
     </div> : <div role="alert" style={{ margin: '24px 0' }}><p>{invoiceError || 'Your invoice is not available yet.'}</p><button className="btn btn-outline" onClick={() => loadInvoice(order.orderId)}>Retry Invoice</button></div>}
     <button className="btn btn-outline" onClick={() => navigate('/orders')}>View My Orders</button>
-    {showInvoice && invoice && <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(0,0,0,.45)' }}>
-      <div style={{ maxWidth: 680, width: '100%', maxHeight: '85vh', overflowY: 'auto', background: '#fff', borderRadius: 12, padding: 28, textAlign: 'left' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><h2 style={{ margin: 0 }}>TNT Online Supermarket</h2><p style={{ margin: '4px 0', color: 'var(--color-muted)' }}>Invoice #{invoice.id}</p></div><button className="btn btn-ghost" onClick={() => setShowInvoice(false)} aria-label="Close invoice"><X size={20} /></button></div>
-        <p><strong>Order status:</strong> {invoice.status}<br /><strong>Payment method:</strong> {paymentLabel(invoice.paymentMethod || (paymentMethod === 'BankTransfer' ? 'BankTransfer' : 'COD'))}<br /><strong>Date:</strong> {new Date(invoice.createdAt).toLocaleString()}</p>
-        <p><strong>Delivery address:</strong><br />{invoice.address?.recipientName}<br />{invoice.address?.line1}, {invoice.address?.city}<br />{invoice.address?.phone}</p>
-        <div style={{ borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: '12px 0' }}>{invoice.items?.map((item) => <div key={item.productId} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0' }}><span>{item.name} × {item.quantity}</span><strong>Rs. {Number(item.lineTotal).toFixed(2)}</strong></div>)}</div>
-        <div style={{ marginTop: 14, display: 'grid', gap: 6, textAlign: 'right' }}><span>Subtotal: Rs. {Number(invoice.subtotal).toFixed(2)}</span><span>Delivery: Rs. {Number(invoice.deliveryFee).toFixed(2)}</span><strong style={{ fontSize: '1.2rem' }}>Total: Rs. {Number(invoice.total).toFixed(2)}</strong></div>
-        <button className="btn btn-primary" onClick={downloadInvoice} style={{ width: '100%', marginTop: 20 }}><FileText size={18} /> Download PDF Invoice</button>
-      </div>
-    </div>}
+    {showInvoice && invoice && <InvoiceModal invoice={invoice} paymentMethod={paymentMethod} onClose={() => setShowInvoice(false)} onDownload={downloadInvoice} />}
   </div>;
 
   return <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px 80px' }}>
@@ -336,8 +314,8 @@ export const CheckoutPage = () => {
         {showForm && <div style={{ display: 'grid', gap: 14, marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--color-border)' }}>
           <label style={fieldStyle}>Full Name <span style={{ color: '#dc2626' }}>*</span><input required value={newAddress.fullName} onChange={(event) => setAddressField('fullName', event.target.value)} style={inputStyle} /></label>
           <label style={fieldStyle}>Full Address <span style={{ color: '#dc2626' }}>*</span><textarea required rows="3" value={newAddress.fullAddress} onChange={(event) => setAddressField('fullAddress', event.target.value)} style={inputStyle} /></label>
-          <label style={fieldStyle}>District <span style={{ color: '#dc2626' }}>*</span><input required value={newAddress.district} onChange={(event) => setAddressField('district', event.target.value)} style={inputStyle} /></label>
-          <label style={fieldStyle}>Contact Number <span style={{ color: '#dc2626' }}>*</span><input required type="tel" value={newAddress.contactNumber} onChange={(event) => setAddressField('contactNumber', event.target.value)} style={inputStyle} /></label>
+          <label style={fieldStyle}><span>District <span style={{ color: '#dc2626' }}>*</span></span><select required value={newAddress.district} onChange={(event) => setAddressField('district', event.target.value)} style={{ ...inputStyle, background: '#fff', color: 'inherit', width: '100%' }}><option value="" disabled>Select your district</option>{SL_DISTRICTS.map(district => <option key={district} value={district}>{district}</option>)}</select></label>
+          <div style={fieldStyle}><label htmlFor="delivery-contact-number">Contact Number <span style={{ color: '#dc2626' }}>*</span></label><MobileNumberInput id="delivery-contact-number" value={newAddress.contactNumber} onChange={value => setAddressField('contactNumber', value)} /></div>
           <button type="button" className="btn btn-primary" onClick={saveAddress} disabled={saving}>{saving ? 'Saving…' : 'Save Address'}</button>
         </div>}
         <div style={{ marginTop: 28, paddingTop: 22, borderTop: '1px solid var(--color-border)' }}>

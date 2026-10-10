@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { downloadInvoicePdf } from '../../components/invoice/downloadInvoice';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, Banknote, CheckCircle, Clock, Download, FileText, Package, XCircle, AlertCircle } from 'lucide-react';
 import axiosInstance from '../../services/axiosInstance';
 
@@ -59,6 +60,9 @@ export const OrderHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState(null);
+  const [invoiceError, setInvoiceError] = useState(null);
+  const invoiceDownloadInProgress = useRef(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [pollingEnabled, setPollingEnabled] = useState(true);
   const [riderDetails, setRiderDetails] = useState(null);
@@ -130,6 +134,24 @@ export const OrderHistoryPage = () => {
       setError(err.message || 'Unable to cancel this order.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const downloadInvoice = async (orderId) => {
+    if (invoiceDownloadInProgress.current) return;
+    invoiceDownloadInProgress.current = true;
+    setDownloadingInvoiceId(orderId);
+    setInvoiceError(null);
+    try {
+      // List rows omit item details, so retrieve the complete, current order.
+      const invoice = await axiosInstance.get(`/order/orders/${orderId}`);
+      if (!invoice?.id || !Array.isArray(invoice.items)) throw new Error('Invoice details are not available yet. Please try again.');
+      downloadInvoicePdf(invoice);
+    } catch (err) {
+      setInvoiceError({ orderId, message: err.message || 'Unable to download your invoice. Please try again.' });
+    } finally {
+      invoiceDownloadInProgress.current = false;
+      setDownloadingInvoiceId(null);
     }
   };
 
@@ -234,10 +256,13 @@ export const OrderHistoryPage = () => {
                 <strong style={{ fontSize: '1.3rem', color: 'var(--color-primary-dark)' }}>
                   {order.currency || 'Rs.'} {Number(order.total || 0).toFixed(2)}
                 </strong>
-                <br />
-                <button className="btn btn-outline" style={{ marginTop: 8 }} onClick={() => open(order.id)}>
-                  View Details
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                  <button className="btn btn-outline" onClick={() => open(order.id)}>View Details</button>
+                  <button className="btn btn-primary" disabled={downloadingInvoiceId !== null} aria-busy={downloadingInvoiceId === order.id} onClick={() => downloadInvoice(order.id)}>
+                    <Download size={16} /> {downloadingInvoiceId === order.id ? 'Preparing PDF…' : 'Download Invoice'}
+                  </button>
+                </div>
+                {invoiceError?.orderId === order.id && <p role="alert" style={{ color: '#b91c1c', fontSize: '.85rem', marginTop: 8, maxWidth: 360 }}>{invoiceError.message}</p>}
               </div>
             </div>
           ))}
@@ -260,6 +285,13 @@ export const OrderHistoryPage = () => {
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
               <span>Status: {badge(selected.status)}</span>
               <span>Payment: {paymentBadge(selected.paymentMethod, selected.paymentStatus)}</span>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <button className="btn btn-primary" disabled={downloadingInvoiceId !== null} aria-busy={downloadingInvoiceId === selected.id} onClick={() => downloadInvoice(selected.id)}>
+                <Download size={17} /> {downloadingInvoiceId === selected.id ? 'Preparing PDF…' : 'Download PDF Invoice'}
+              </button>
+              {invoiceError?.orderId === selected.id && <p role="alert" style={{ color: '#b91c1c', fontSize: '.85rem', marginTop: 8 }}>{invoiceError.message}</p>}
             </div>
 
             <OrderStatusTracker status={selected.status} />

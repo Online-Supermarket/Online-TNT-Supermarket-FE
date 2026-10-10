@@ -1,3 +1,5 @@
+import MobileNumberInput from '../MobileNumberInput';
+import { normalizeMobileNumber, isMobileNumber, MOBILE_NUMBER_ERROR } from '../../utils/mobileNumber';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Lock, Mail, Phone, User, CheckCircle2, Eye, EyeOff, AlertCircle, UserCheck } from 'lucide-react';
 
@@ -14,9 +16,9 @@ const pwStrength = (p) => {
 const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 const strengthColor = ['', '#ef4444', '#f59e0b', '#22c55e', '#059669'];
 
-const InputField = ({ label, required, icon: Icon, error, hint, children }) => (
+const InputField = ({ label, required, icon: Icon, error, hint, children, htmlFor }) => (
   <div>
-    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+    <label htmlFor={htmlFor} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
       {label} {required && <span style={{ color: '#ef4444', lineHeight: 1 }}>*</span>}
     </label>
     <div style={{ position: 'relative' }}>
@@ -53,7 +55,7 @@ const selectStyle = (hasError) => ({
 export const CustomerFormModal = ({ isOpen, mode = 'create', customer = null, onClose, onSave }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('07');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState('Active');
@@ -72,14 +74,14 @@ export const CustomerFormModal = ({ isOpen, mode = 'create', customer = null, on
     if (customer && mode === 'edit') {
       setFullName(customer.fullName || customer.displayName || '');
       setEmail(customer.email || '');
-      setPhoneNumber(customer.contactNumber || '');
+      setPhoneNumber(normalizeMobileNumber(customer.contactNumber) || '07');
       setStatus(customer.active === false ? 'Inactive' : 'Active');
       setPassword('');
       setConfirmPassword('');
     } else {
       setFullName('');
       setEmail('');
-      setPhoneNumber('');
+      setPhoneNumber('07');
       setPassword('');
       setConfirmPassword('');
       setStatus('Active');
@@ -97,7 +99,7 @@ export const CustomerFormModal = ({ isOpen, mode = 'create', customer = null, on
     if (!fullName.trim()) errs.fullName = 'Full name is required.';
     if (!email.trim()) errs.email = 'Email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Enter a valid email address.';
-    if (!phoneNumber.trim()) errs.phoneNumber = 'Phone number is required.';
+    if (!isMobileNumber(phoneNumber)) errs.phoneNumber = MOBILE_NUMBER_ERROR;
     if (mode === 'create') {
       if (!password) errs.password = 'Password is required.';
       else if (password.length < 8) errs.password = 'Min 8 characters.';
@@ -118,7 +120,7 @@ export const CustomerFormModal = ({ isOpen, mode = 'create', customer = null, on
         fullName: fullName.trim(),
         displayName: fullName.trim(),
         email: email.trim().toLowerCase(),
-        contactNumber: phoneNumber.trim(),
+        contactNumber: normalizeMobileNumber(phoneNumber),
         active: status === 'Active',
         ...(mode === 'create' ? { password } : {}),
       });
@@ -240,15 +242,9 @@ export const CustomerFormModal = ({ isOpen, mode = 'create', customer = null, on
                 />
               </InputField>
 
-              <InputField label="Phone Number" required icon={Phone} error={touched.phoneNumber && errors.phoneNumber}>
-                <input
-                  type="tel"
-                  placeholder="e.g. +94 77 123 4567"
-                  value={phoneNumber}
-                  onChange={e => setPhoneNumber(e.target.value)}
-                  onBlur={() => touch('phoneNumber')}
-                  style={inputStyle(touched.phoneNumber && errors.phoneNumber)}
-                />
+              <InputField htmlFor="customer-phone-number" label="Phone Number" required error={touched.phoneNumber && errors.phoneNumber}>
+                <MobileNumberInput id="customer-phone-number" value={phoneNumber} onChange={setPhoneNumber}
+                    onBlur={() => touch('phoneNumber')} invalid={Boolean(touched.phoneNumber && errors.phoneNumber)} />
               </InputField>
             </div>
 

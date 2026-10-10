@@ -1,0 +1,75 @@
+.tnt-invoice-modal { width: min(840px, calc(100% - 32px)); max-height: 92dvh; padding: 0; border: 0; border-radius: 20px; margin: auto; color: #193c30; background: #f3f5f0; box-shadow: 0 30px 100px #071e3050; text-align: left; overflow: auto; }
+.tnt-invoice-modal::backdrop { background: #081f19a6; backdrop-filter: blur(5px); }
+.tnt-invoice-toolbar { padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: #62756a; }
+.tnt-invoice-toolbar > span { display: flex; align-items: center; gap: 8px; }
+.tnt-invoice-dot { height: 6px; width: 6px; border-radius: 50%; background: #538561; }
+.tnt-invoice-toolbar button { display: grid; place-items: center; background: white; border: 1px solid #dde6dd; color: #193c30; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; }
+.tnt-invoice-modal button:focus-visible { outline: 3px solid #a8c57a; outline-offset: 3px; }
+.tnt-invoice-paper { margin: 0 24px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 14px #193c3008; border: 1px solid #dfe6dc; }
+.tnt-invoice-header { display: flex; justify-content: space-between; gap: 24px; align-items: center; background: #123e30; color: white; padding: 32px; border-top: 5px solid #bfd692; }
+.tnt-invoice-brand { display: flex; gap: 12px; align-items: center; }
+.tnt-invoice-logo { width: 49px; height: 49px; border-radius: 14px; display: grid; place-items: center; border: 1px solid #ffffff40; color: #d7e8ba; background: #ffffff0a; }
+.tnt-invoice-brand strong { display: block; font-family: var(--font-serif), Georgia, serif; font-size: 23px; line-height: 1.2; letter-spacing: -.6px; }
+.tnt-invoice-brand div > span { display: block; font-size: 9px; letter-spacing: 3px; margin-top: 4px; color: #d7e8ba; }
+.tnt-invoice-header p { margin: 18px 0 0; color: #c3d5c9; font-size: 11px; }
+.tnt-invoice-heading { text-align: right; }
+.tnt-invoice-eyebrow { font-size: 8px; letter-spacing: 1.4px; color: #c7d9b5; }
+.tnt-invoice-heading h2 { font-family: var(--font-serif), Georgia, serif; color: white; font-size: 40px; font-weight: 500; margin: 3px 0 8px; line-height: 1.2; }
+.tnt-invoice-status { display: inline-block; padding: 4px 11px; border-radius: 20px; border: 1px solid #d7e8ba50; background: #ffffff0c; font-size: 10px; color: #e1eccd; }
+.tnt-invoice-content { padding: 26px 32px 18px; }
+.tnt-invoice-reference { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid #e5ebe3; padding-bottom: 22px; }
+.tnt-invoice-reference > div:first-child { min-width: 0; }
+.tnt-invoice-reference > div:last-child { flex-shrink: 0; text-align: right; }
+.tnt-invoice-label { display: block; font-size: 9px; letter-spacing: 1.1px; color: #687c70; margin-bottom: 7px; }
+.tnt-invoice-reference strong { font-size: 11px; font-weight: 600; overflow-wrap: anywhere; }
+.tnt-invoice-details { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 24px 0; font-size: 12px; }
+.tnt-invoice-details h3 { margin: 0 0 10px; display: flex; align-items: center; gap: 6px; color: #718074; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+.tnt-invoice-details p { margin: 5px 0 0; }
+.tnt-invoice-details section { min-width: 0; overflow-wrap: anywhere; }
+.tnt-invoice-details address { font-style: normal; color: #627268; line-height: 1.7; margin-top: 4px; }
+.tnt-invoice-details address span { display: block; }
+.tnt-invoice-phone { margin-top: 5px; }
+.tnt-invoice-muted { color: #718074; font-size: 10px; }
+.tnt-invoice-table-wrap { overflow-x: auto; }
+.tnt-invoice-table { border-collapse: collapse; width: 100%; font-size: 11px; }
+.tnt-invoice-table caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.tnt-invoice-table th { background: #edf3e9; padding: 12px 10px; font-size: 9px; text-transform: uppercase; letter-spacing: .6px; color: #536b53; text-align: right; white-space: nowrap; }
+.tnt-invoice-table th:first-child { text-align: left; border-radius: 5px 0 0 5px; }
+.tnt-invoice-table th:last-child { border-radius: 0 5px 5px 0; }
+.tnt-invoice-table td { padding: 17px 10px; border-bottom: 1px solid #e9eee5; text-align: right; white-space: nowrap; }
+.tnt-invoice-table td:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; min-width: 130px; }
+.tnt-invoice-item-number { font-size: 9px; color: #829380; margin-right: 12px; }
+.tnt-invoice-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 25px 0; }
+.tnt-invoice-note { color: #7a8c68; padding: 8px 0; }
+.tnt-invoice-note h3 { font-family: var(--font-serif), Georgia, serif; color: #244b37; font-size: 19px; font-weight: 500; line-height: 1.35; margin: 8px 0; }
+.tnt-invoice-note p { font-size: 10px; max-width: 190px; margin: 0; }
+.tnt-invoice-totals > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 12px; font-size: 12px; }
+.tnt-invoice-totals > div > span { color: #6d7c70; }
+.tnt-invoice-totals .tnt-invoice-total { padding: 17px 14px; background: #123e30; color: white; border-radius: 6px; margin-top: 10px; }
+.tnt-invoice-total > span { color: white !important; }
+.tnt-invoice-total small { display: block; font-size: 8px; color: #bfd692; margin-top: 3px; letter-spacing: 1px; }
+.tnt-invoice-total strong { font-size: 20px; white-space: nowrap; }
+.tnt-invoice-footer { border-top: 1px dashed #dbe4d6; padding-top: 16px; display: flex; justify-content: space-between; gap: 12px; color: #718074; font-size: 9px; }
+.tnt-invoice-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 24px; }
+.tnt-invoice-actions > span { font-size: 11px; color: #6a7c6c; }
+.tnt-invoice-actions .btn { font-size: 12px; padding: 12px 20px; }
+@media (max-width: 600px) {
+  .tnt-invoice-modal { width: calc(100% - 16px); max-height: 96dvh; border-radius: 12px; }
+  .tnt-invoice-toolbar { padding: 12px 14px; font-size: 10px; }
+  .tnt-invoice-paper { margin: 0 10px; }
+  .tnt-invoice-header { padding: 22px 18px; gap: 20px; flex-wrap: wrap; }
+  .tnt-invoice-heading { text-align: left; }
+  .tnt-invoice-eyebrow { display: none; }
+  .tnt-invoice-heading h2 { font-size: 30px; }
+  .tnt-invoice-content { padding: 20px 16px 16px; }
+  .tnt-invoice-reference { flex-wrap: wrap; }
+  .tnt-invoice-reference > div:last-child { text-align: left; }
+  .tnt-invoice-details { gap: 18px; }
+  .tnt-invoice-table { min-width: 420px; }
+  .tnt-invoice-summary { grid-template-columns: 1fr; gap: 8px; }
+  .tnt-invoice-note { display: none; }
+  .tnt-invoice-footer { flex-direction: column; gap: 5px; }
+  .tnt-invoice-actions { padding: 16px 10px; }
+  .tnt-invoice-actions > span { display: none; }
+  .tnt-invoice-actions .btn { width: 100%; justify-content: center; }
+}
