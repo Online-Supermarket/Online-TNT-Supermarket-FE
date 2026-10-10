@@ -27,15 +27,15 @@ export const ContactPage = () => {
               <div className="benefit-icon"><MapPin size={20} /></div>
               <div>
                 <div style={{ fontWeight: 700 }}>Headquarters Address</div>
-                <div style={{ color: 'var(--color-muted)', fontSize: '0.9rem' }}>100 Market St, Fresh City, FC 90210</div>
+                <div style={{ color: 'var(--color-muted)', fontSize: '0.9rem' }}>209/23 New Kandy Road, Nittambuwa</div>
               </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div className="benefit-icon"><Phone size={20} /></div>
               <div>
-                <div style={{ fontWeight: 700 }}>Toll-Free Phone Hotline</div>
-                <div style={{ color: 'var(--color-muted)', fontSize: '0.9rem' }}>+1 (800) 868-3737 (24/7 Available)</div>
+                <div style={{ fontWeight: 700 }}>Phone Hotline</div>
+                <div style={{ color: 'var(--color-muted)', fontSize: '0.9rem' }}>077 - 3162025 (24/7 Available)</div>
               </div>
             </div>
 

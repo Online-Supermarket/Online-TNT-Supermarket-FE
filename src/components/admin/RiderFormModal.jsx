@@ -1,6 +1,8 @@
+import MobileNumberInput from '../MobileNumberInput';
+import { normalizeMobileNumber, isMobileNumber, MOBILE_NUMBER_ERROR } from '../../utils/mobileNumber';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Truck, Lock, Mail, Phone, User, CheckCircle2, Eye, EyeOff, AlertCircle, Zap, Clock, WifiOff, Car, Hash, FileText, MapPin, Home } from 'lucide-react';
-import { isLicenseNumber, isSriLankanPhone, isVehicleNumber, normalizeSriLankanPhone, normalizeVehicleIdentifier } from '../../utils/identityValidation';
+import { isLicenseNumber, isVehicleNumber, normalizeVehicleIdentifier } from '../../utils/identityValidation';
 
 const VEHICLE_TYPES = [
   { value: '', label: 'Select vehicle type…' },
@@ -31,9 +33,9 @@ const AVAILABILITY_OPTIONS = [
   { value: 'Offline', label: '⚫ Offline', icon: WifiOff, color: '#6b7280' },
 ];
 
-const InputField = ({ label, required, icon: Icon, error, hint, children }) => (
+const InputField = ({ label, required, icon: Icon, error, hint, children, htmlFor }) => (
   <div>
-    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+    <label htmlFor={htmlFor} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
       {label} {required && <span style={{ color: '#ef4444', lineHeight: 1 }}>*</span>}
     </label>
     <div style={{ position: 'relative' }}>
@@ -69,7 +71,7 @@ const selectStyle = (hasError, hasIcon = false) => ({
 export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose, onSave }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('07');
   const [district, setDistrict] = useState('');
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
@@ -96,7 +98,7 @@ export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose,
     if (rider && mode === 'edit') {
       setFullName(rider.fullName || rider.displayName || '');
       setEmail(rider.email || '');
-      setPhoneNumber(rider.contactNumber || '');
+      setPhoneNumber(normalizeMobileNumber(rider.contactNumber) || '07');
       setDistrict(rider.district || '');
       setAddress(rider.address || '');
       setStatus(rider.active === false ? 'Inactive' : 'Active');
@@ -107,7 +109,7 @@ export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose,
       setLicenseNumber(rider.licenseNumber || '');
       setPassword(''); setConfirmPassword('');
     } else {
-      setFullName(''); setEmail(''); setPhoneNumber(''); setDistrict(''); setAddress('');
+      setFullName(''); setEmail(''); setPhoneNumber('07'); setDistrict(''); setAddress('');
       setPassword(''); setConfirmPassword('');
       setStatus('Active'); setAvailabilityStatus('Available');
       setVehicleType(''); setVehicleModel(''); setVehicleNumber(''); setLicenseNumber('');
@@ -124,7 +126,7 @@ export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose,
     if (!fullName.trim()) errs.fullName = 'Full name is required.';
     if (!email.trim()) errs.email = 'Email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Enter a valid email address.';
-    if (!phoneNumber.trim() || !isSriLankanPhone(phoneNumber)) errs.phoneNumber = 'Please enter a valid Sri Lankan phone number.';
+    if (!isMobileNumber(phoneNumber)) errs.phoneNumber = MOBILE_NUMBER_ERROR;
     if (!district.trim()) errs.district = 'District is required.';
     if (!address.trim()) errs.address = 'Address is required.';
     if (!vehicleType.trim()) errs.vehicleType = 'Vehicle type is required.';
@@ -149,7 +151,7 @@ export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose,
       await onSave({
         fullName: fullName.trim(),
         email: email.trim(),
-        phoneNumber: normalizeSriLankanPhone(phoneNumber),
+        phoneNumber: normalizeMobileNumber(phoneNumber),
         district: district.trim(),
         address: address.trim(),
         status,
@@ -232,15 +234,9 @@ export const RiderFormModal = ({ isOpen, mode = 'create', rider = null, onClose,
                     style={inputStyle(touched.email && errors.email)}
                   />
                 </InputField>
-                <InputField label="Phone Number" required icon={Phone} error={touched.phoneNumber && errors.phoneNumber}>
-                  <input
-                    type="tel"
-                    placeholder="+94 77 987 6543"
-                    value={phoneNumber}
-                    onChange={e => setPhoneNumber(e.target.value)}
-                    onBlur={() => touch('phoneNumber')}
-                    style={inputStyle(touched.phoneNumber && errors.phoneNumber)}
-                  />
+                <InputField htmlFor="rider-phone-number" label="Phone Number" required error={touched.phoneNumber && errors.phoneNumber}>
+                  <MobileNumberInput id="rider-phone-number" value={phoneNumber} onChange={setPhoneNumber}
+                    onBlur={() => touch('phoneNumber')} invalid={Boolean(touched.phoneNumber && errors.phoneNumber)} />
                 </InputField>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>

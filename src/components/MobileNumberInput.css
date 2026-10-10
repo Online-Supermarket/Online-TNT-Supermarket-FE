@@ -1,0 +1,7 @@
+.tnt-mobile-number { display: flex; align-items: stretch; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; overflow: hidden; }
+.tnt-mobile-number:focus-within { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.tnt-mobile-number-prefix { display: flex; align-items: center; padding: 10px 0 10px 12px; color: var(--color-primary-dark); font: inherit; user-select: none; }
+.tnt-mobile-number input { flex: 1; width: 100%; min-width: 0; padding: 10px 12px 10px 0; border: 0; outline: none; background: transparent; color: inherit; font: inherit; border-radius: 0; }
+
+.tnt-mobile-number[data-invalid] { border-color: #dc2626; }
+.tnt-mobile-number-hint { display: block; margin-top: 5px; color: var(--color-muted); font-size: .75rem; font-weight: 400; }

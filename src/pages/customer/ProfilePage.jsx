@@ -1,3 +1,4 @@
+import MobileNumberInput from '../../components/MobileNumberInput';
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { User, Mail, MapPin, ShieldCheck, Camera } from 'lucide-react';
@@ -8,7 +9,7 @@ export const ProfilePage = () => {
   const [form, setForm] = useState({
     displayName: user?.displayName || 'Sarah Customer',
     email: user?.email || 'customer@marketflow.local',
-    phone: '',
+    phone: '07',
     address: '',
   });
 
@@ -66,13 +67,8 @@ export const ProfilePage = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: 6 }}>Phone Number</label>
-            <input
-              type="text"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', outline: 'none' }}
-            />
+            <label htmlFor="customer-profile-phone" style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: 6 }}>Phone Number</label>
+            <MobileNumberInput id="customer-profile-phone" value={form.phone} onChange={value => setForm(current => ({ ...current, phone: value }))} />
           </div>
 
           <div>

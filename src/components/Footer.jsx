@@ -36,8 +36,8 @@ export const Footer = () => {
         <div>
           <h4 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', marginBottom: '16px', color: '#ffffff' }}>Contact Us</h4>
           <div style={{ display: 'grid', gap: '12px', fontSize: '0.9rem', color: 'var(--color-soft-mint)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><MapPin size={16} /> 100 Market St, Fresh City, FC 90210</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Phone size={16} /> +1 (800) 868-3737</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><MapPin size={16} /> 209/23 New Kandy Road, Nittambuwa</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Phone size={16} /> 077 - 3162025</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Mail size={16} /> support@tntmarket.local</div>
           </div>
         </div>
