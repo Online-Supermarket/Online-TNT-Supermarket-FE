@@ -16,7 +16,8 @@ jobs:
   deploy:
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event.workflow_run.head_branch == 'main' &&
+      vars.AZURE_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +29,14 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - name: Validate deployment configuration
+        env:
+          API_URL: ${{ vars.VITE_API_BASE_URL }}
+          SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+        run: |
+          test -n "$SWA_TOKEN" || { echo 'Missing Azure Static Web Apps deployment token'; exit 1; }
+          [[ "$API_URL" == https://*/api ]] || { echo 'VITE_API_BASE_URL must be an HTTPS /api endpoint'; exit 1; }
+
       - name: Install dependencies
         run: npm ci
 
@@ -35,7 +44,7 @@ jobs:
         run: npm run build
         env:
           # Public browser configuration, intentionally not a GitHub secret.
-          VITE_API_BASE_URL: https://tnt-gateway-vnet.yellowpebble-d68fafeb.eastasia.azurecontainerapps.io/api
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
 
       - name: Verify compiled deployment files
         run: node scripts/verify-static-build.mjs dist
