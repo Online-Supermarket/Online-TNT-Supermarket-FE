@@ -26,9 +26,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Validate API base URL
+        env:
+          API_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: |
+          [[ "$API_URL" == https://*/api ]] || { echo 'Set repository variable VITE_API_BASE_URL to the HTTPS gateway /api endpoint'; exit 1; }
       - run: npm run build
         env:
-          VITE_API_BASE_URL: https://tnt-gateway-vnet.yellowpebble-d68fafeb.eastasia.azurecontainerapps.io/api
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       - name: Verify compiled deployment files
         run: node scripts/verify-static-build.mjs dist
       - uses: actions/upload-artifact@v4
@@ -51,6 +56,6 @@ jobs:
           push: false
           tags: marketflow-frontend:${{ github.sha }}
           build-args: |
-            VITE_API_BASE_URL=https://tnt-gateway-vnet.yellowpebble-d68fafeb.eastasia.azurecontainerapps.io/api
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
