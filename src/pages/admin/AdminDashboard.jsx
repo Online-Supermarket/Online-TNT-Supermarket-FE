@@ -14,11 +14,29 @@ export const AdminDashboard = () => {
   const load = useCallback(async () => {
     setError('');
     try {
-      const [orders, sales, customers, inventory] = await Promise.all([
-        axiosInstance.get('/order/staff/orders'), axiosInstance.get('/reporting/reports/sales'),
-        axiosInstance.get('/identity/admin/users?role=Customer'), axiosInstance.get('/reporting/reports/inventory'),
+      const [ordersRes, salesRes, customersRes, inventoryRes] = await Promise.allSettled([
+        axiosInstance.get('/order/staff/orders'),
+        axiosInstance.get('/order/reports/sales'),
+        axiosInstance.get('/identity/admin/users?role=Customer'),
+        axiosInstance.get('/catalog/reports/inventory'),
       ]);
-      setData({ orders: Array.isArray(orders) ? orders : [], sales: sales || null, customers: Array.isArray(customers) ? customers.length : 0, inventory: inventory || null });
+
+      const orders = ordersRes.status === 'fulfilled' ? ordersRes.value : [];
+      const sales = salesRes.status === 'fulfilled' ? salesRes.value : null;
+      const customers = customersRes.status === 'fulfilled' ? customersRes.value : [];
+      const inventory = inventoryRes.status === 'fulfilled' ? inventoryRes.value : null;
+
+      const failures = [ordersRes, salesRes, customersRes, inventoryRes].filter(r => r.status === 'rejected');
+      if (failures.length === 4) {
+        setError(failures[0].reason?.message || 'Unable to load executive dashboard data.');
+      }
+
+      setData({
+        orders: Array.isArray(orders) ? orders : [],
+        sales: sales || null,
+        customers: Array.isArray(customers) ? customers.length : 0,
+        inventory: inventory || null,
+      });
     } catch (err) { setError(err.message || 'Unable to load executive dashboard data.'); }
     finally { setLoading(false); }
   }, []);
@@ -26,15 +44,21 @@ export const AdminDashboard = () => {
 
   const weeklyRevenue = useMemo(() => {
     const days = Array.from({ length: 7 }, (_, index) => { const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - (6 - index)); return { key: date.toISOString().slice(0, 10), label: date.toLocaleDateString(undefined, { weekday: 'short' }), value: 0 }; });
-    for (const order of data.sales?.orders || []) { if (order.status !== 'Confirmed') continue; const bucket = days.find(day => day.key === String(order.createdAt || '').slice(0, 10)); if (bucket) bucket.value += Number(order.total || 0); }
+    for (const order of data.sales?.orders || data.sales?.Orders || []) {
+      const status = order.status || order.Status;
+      if (!['Confirmed', 'Delivery', 'Delivered'].includes(status)) continue;
+      const dateStr = String(order.createdAt || order.CreatedAt || '').slice(0, 10);
+      const bucket = days.find(day => day.key === dateStr);
+      if (bucket) bucket.value += Number(order.total || order.Total || 0);
+    }
     return days;
   }, [data.sales]);
   const statusBreakdown = useMemo(() => Object.entries(data.orders.reduce((result, order) => ({ ...result, [order.status]: (result[order.status] || 0) + 1 }), {})).map(([label, value]) => ({ label, value })), [data.orders]);
   const cards = [
-    { label: 'TOTAL REVENUE', value: money(data.sales?.recognizedSales), sub: 'Confirmed-order revenue', icon: <DollarSign size={24} /> },
+    { label: 'TOTAL REVENUE', value: money(data.sales?.recognizedSales ?? data.sales?.RecognizedSales), sub: 'Confirmed-order revenue', icon: <DollarSign size={24} /> },
     { label: 'TOTAL ORDERS', value: data.orders.length, sub: 'Orders in the fulfillment pipeline', icon: <ShoppingCart size={24} />, tone: { background: '#dbeafe', color: '#1e40af' } },
     { label: 'ACTIVE CUSTOMERS', value: data.customers ?? '—', sub: 'Active customer accounts', icon: <Users size={24} />, tone: { background: '#fef3c7', color: '#b45309' } },
-    { label: 'LOW STOCK ALERTS', value: data.inventory?.lowStockCount ?? '—', sub: 'Products below reorder level', icon: <AlertTriangle size={24} />, tone: { background: '#fee2e2', color: '#dc2626' } },
+    { label: 'LOW STOCK ALERTS', value: data.inventory?.lowStockCount ?? data.inventory?.LowStockCount ?? '—', sub: 'Products below reorder level', icon: <AlertTriangle size={24} />, tone: { background: '#fee2e2', color: '#dc2626' } },
   ];
   return <div>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'start', marginBottom: 28 }}><div><h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', color: 'var(--color-primary-dark)', marginBottom: 6 }}>Executive Dashboard Overview</h1><p style={{ color: 'var(--color-muted)', margin: 0 }}>Real-time sales performance, store fulfillment, and inventory health.</p></div><button className="btn btn-outline" onClick={load} disabled={loading}><RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh</button></div>

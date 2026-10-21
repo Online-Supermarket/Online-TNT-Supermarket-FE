@@ -1,4 +1,4 @@
-export const paymentName = method => ({ CashOnDelivery: 'Cash on delivery', COD: 'Cash on delivery', BankTransfer: 'Bank transfer' }[method] || 'Unspecified');
+export const paymentName = method => method && String(method).toLowerCase() === 'banktransfer' ? 'Bank transfer' : 'Cash on delivery';
 export const isSale = order => ['Confirmed', 'Delivery', 'Delivered'].includes(order.status);
 export const formatMoney = (value, currency = 'LKR') => `${currency === 'LKR' ? 'Rs.' : currency} ${Number(value || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export const totalsByCurrency = orders => orders.reduce((totals, order) => {
@@ -31,12 +31,18 @@ export function reportCsv(kind, orders, products, filters, generatedAt) {
   ];
   if (kind !== 'inventory') {
     rows.push(['SALES SUMMARY'], ['Payment type', 'Currency', 'Sales total']);
-    for (const method of ['CashOnDelivery', 'BankTransfer', 'Unknown']) {
-      const sales = orders.filter(isSale).filter(o => method === 'Unknown' ? !['CashOnDelivery','COD','BankTransfer'].includes(o.paymentMethod) : method === 'CashOnDelivery' ? ['CashOnDelivery','COD'].includes(o.paymentMethod) : o.paymentMethod === method);
+    for (const method of ['CashOnDelivery', 'BankTransfer']) {
+      const sales = orders.filter(isSale).filter(o => {
+        const pm = String(o.paymentMethod || o.PaymentMethod || '').toLowerCase();
+        return method === 'CashOnDelivery' ? pm !== 'banktransfer' : pm === 'banktransfer';
+      });
       for (const [currency, total] of Object.entries(totalsByCurrency(sales))) rows.push([paymentName(method), currency, Number(total.toFixed(2))]);
     }
     rows.push([], ['ORDER DETAILS'], ['Order ID', 'Created at', 'Status', 'Payment method', 'Payment status', 'Subtotal', 'Tax', 'Delivery fee', 'Total', 'Currency', 'Included in sales']);
-    orders.forEach(o => rows.push([o.id, o.createdAt, o.status, paymentName(o.paymentMethod), o.paymentStatus, o.subtotal, o.tax, o.deliveryFee, o.total, o.currency || 'LKR', isSale(o) ? 'Yes' : 'No']));
+    orders.forEach(o => {
+      const pm = String(o.paymentMethod || o.PaymentMethod || '').toLowerCase();
+      rows.push([o.id || o.Id, o.createdAt || o.CreatedAt, o.status || o.Status, paymentName(pm === 'banktransfer' ? 'BankTransfer' : ''), pm !== 'banktransfer' ? 'Cash on delivery' : (o.paymentStatus || o.PaymentStatus || 'Unknown'), o.subtotal || o.Subtotal, o.tax || o.Tax, o.deliveryFee || o.DeliveryFee, o.total || o.Total, o.currency || o.Currency || 'LKR', isSale(o) ? 'Yes' : 'No']);
+    });
   }
   if (kind !== 'sales') {
     rows.push([], ['STOCK SUMMARY'], ['Products', products.length], ['Units on hand', products.reduce((sum,p) => sum + Number(p.stockQuantity), 0)], ['Stock retail value (LKR)', Number(products.reduce((sum,p) => sum + Number(p.price) * Number(p.stockQuantity), 0).toFixed(2))], [], ['STOCK DETAILS'], ['SKU', 'Product', 'Category', 'Stock quantity', 'Retail price (LKR)', 'Retail value (LKR)', 'Stock status']);
