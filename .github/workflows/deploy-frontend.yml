@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: [Frontend CI]
     types: [completed]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,15 +16,17 @@ concurrency:
 jobs:
   deploy:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'develop'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
@@ -35,7 +38,7 @@ jobs:
         run: npm run build
         env:
           # Public browser configuration, intentionally not a GitHub secret.
-          VITE_API_BASE_URL: https://tnt-gateway-vnet.yellowpebble-d68fafeb.eastasia.azurecontainerapps.io/api
+          VITE_API_BASE_URL: https://tnt-gateway-ovindu.azurewebsites.net/api
 
       - name: Verify compiled deployment files
         run: node scripts/verify-static-build.mjs dist
