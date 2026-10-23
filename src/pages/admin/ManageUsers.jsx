@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users, UserCheck, UserX, Shield, Search, RefreshCw, Plus,
   X, CheckCircle, AlertOctagon, Filter, ChevronDown, ChevronUp,
-  Edit3, Mail, Calendar, Hash
+  Edit3, Mail, Calendar, Hash, Eye, EyeOff
 } from 'lucide-react';
 import { ALL_ROLES } from '../../utils/roles';
 import axiosInstance from '../../services/axiosInstance';
@@ -72,6 +72,7 @@ export const ManageUsers = () => {
   const [newEmail, setNewEmail]     = useState('');
   const [newName, setNewName]       = useState('');
   const [newPass, setNewPass]       = useState('');
+  const [showNewPass, setShowNewPass] = useState(false);
   const [newRoles, setNewRoles]     = useState(['Staff']);
 
   // Edit roles modal
@@ -471,7 +472,36 @@ export const ManageUsers = () => {
                 </div>
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#374151', marginBottom: 4 }}>Temporary Password <span style={{ color: '#dc2626' }}>*</span></label>
-                  <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Min 8 chars" required style={inputStyle} />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showNewPass ? 'text' : 'password'}
+                      value={newPass}
+                      onChange={e => setNewPass(e.target.value)}
+                      placeholder="Min 8 chars"
+                      required
+                      style={{ ...inputStyle, paddingRight: 38 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(p => !p)}
+                      aria-label={showNewPass ? 'Hide password' : 'Show password'}
+                      style={{
+                        position: 'absolute',
+                        right: 10,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#6b7280',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 4,
+                      }}
+                    >
+                      {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#374151', marginBottom: 8 }}>Assign Roles <span style={{ color: '#dc2626' }}>*</span></label>

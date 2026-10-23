@@ -4,7 +4,7 @@ import { isSriLankanNic } from '../../utils/identityValidation';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Leaf, Lock, Mail, User, MapPin, CreditCard, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Leaf, Lock, Mail, User, MapPin, CreditCard, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 import { SL_DISTRICTS } from '../../utils/districts';
 
@@ -27,6 +27,8 @@ export const RegisterPage = () => {
     fullName: '', email: '', idNumber: '', contactNumber: '07',
     district: '', address: '', password: '', confirmPassword: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors]   = useState({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading]  = useState(false);
@@ -232,15 +234,31 @@ export const RegisterPage = () => {
               {field('Password *', 'password',
                 <div style={{ position: 'relative' }}>
                   <Lock size={16} style={iconStyle} />
-                  <input id="password" type="password" value={form.password} onChange={set('password')}
-                    placeholder="Min. 8 characters" autoComplete="new-password" style={inputStyle(errors.password)} />
+                  <input id="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={set('password')}
+                    placeholder="Min. 8 characters" autoComplete="new-password" style={{ ...inputStyle(errors.password), paddingRight: 38 }} />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted)', display: 'flex', alignItems: 'center', padding: 4 }}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>, errors.password
               )}
               {field('Confirm Password *', 'confirmPassword',
                 <div style={{ position: 'relative' }}>
                   <Lock size={16} style={iconStyle} />
-                  <input id="confirmPassword" type="password" value={form.confirmPassword} onChange={set('confirmPassword')}
-                    placeholder="Re-enter password" autoComplete="new-password" style={inputStyle(errors.confirmPassword)} />
+                  <input id="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={set('confirmPassword')}
+                    placeholder="Re-enter password" autoComplete="new-password" style={{ ...inputStyle(errors.confirmPassword), paddingRight: 38 }} />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(p => !p)}
+                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted)', display: 'flex', alignItems: 'center', padding: 4 }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>, errors.confirmPassword
               )}
             </div>
