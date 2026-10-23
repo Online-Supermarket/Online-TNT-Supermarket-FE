@@ -26,9 +26,22 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Validate API base URL
+        env:
+          API_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: |
+          if [ -z "$API_URL" ] || [ "$API_URL" = "https://example.invalid/api" ]; then
+            echo "::error::Repository variable VITE_API_BASE_URL is not configured or is using placeholder https://example.invalid/api."
+            echo "Please set repository variable VITE_API_BASE_URL to the production gateway endpoint (e.g. https://tnt-gateway-ovindu.azurewebsites.net/api)."
+            exit 1
+          fi
+          if [[ "$API_URL" != https://*/api ]]; then
+            echo "::error::VITE_API_BASE_URL must be an HTTPS /api endpoint (e.g. https://tnt-gateway-ovindu.azurewebsites.net/api)."
+            exit 1
+          fi
       - run: npm run build
         env:
-          VITE_API_BASE_URL: https://tnt-gateway-ovindu.azurewebsites.net/api
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       - name: Verify compiled deployment files
         run: node scripts/verify-static-build.mjs dist
       - uses: actions/upload-artifact@v4
@@ -51,6 +64,6 @@ jobs:
           push: false
           tags: marketflow-frontend:${{ github.sha }}
           build-args: |
-            VITE_API_BASE_URL=https://tnt-gateway-ovindu.azurewebsites.net/api
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
