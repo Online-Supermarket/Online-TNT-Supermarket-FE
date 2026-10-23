@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: [Frontend CI]
     types: [completed]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,16 +16,18 @@ concurrency:
 jobs:
   deploy:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      vars.AZURE_DEPLOY_ENABLED == 'true'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       vars.AZURE_DEPLOY_ENABLED == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
@@ -35,6 +38,10 @@ jobs:
           SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
         run: |
           test -n "$SWA_TOKEN" || { echo 'Missing Azure Static Web Apps deployment token'; exit 1; }
+          if [ -z "$API_URL" ] || [ "$API_URL" = "https://example.invalid/api" ]; then
+            echo "::error::VITE_API_BASE_URL is not set or is using placeholder https://example.invalid/api."
+            exit 1
+          fi
           [[ "$API_URL" == https://*/api ]] || { echo 'VITE_API_BASE_URL must be an HTTPS /api endpoint'; exit 1; }
 
       - name: Install dependencies

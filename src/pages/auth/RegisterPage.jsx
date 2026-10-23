@@ -1,5 +1,6 @@
 import MobileNumberInput from '../../components/MobileNumberInput';
 import { isMobileNumber, MOBILE_NUMBER_ERROR } from '../../utils/mobileNumber';
+import { isSriLankanNic } from '../../utils/identityValidation';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +41,8 @@ export const RegisterPage = () => {
     if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
                                           e.email         = 'A valid email address is required.';
     if (!form.idNumber.trim())            e.idNumber      = 'NIC / ID number is required.';
+    else if (!isSriLankanNic(form.idNumber))
+                                          e.idNumber      = 'Please enter a valid Sri Lankan NIC number.';
     if (!form.contactNumber.trim())       e.contactNumber = 'Contact number is required.';
     else if (!isMobileNumber(form.contactNumber))
                                           e.contactNumber = MOBILE_NUMBER_ERROR;
